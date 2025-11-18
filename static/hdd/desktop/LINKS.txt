@@ -2,5 +2,5 @@ LINKS
 -----------------
 Email: y3v4d@proton.me
 Github: https://github.com/y3v4d
-Repository: https://github.com/y3v4d/y3v4d-site
+Repository: https://github.com/y3v4d/yOS
 Fiverr Profile: https://www.fiverr.com/y3v4d_

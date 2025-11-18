@@ -1,5 +1,16 @@
 CHANGELOG
 ------------------
+Version 0.1.1 - 18/11/2025
+
+- Added Snow Simulator application as a new desktop icon.
+- Added Snow Simulator application that simulates falling snow with suction vortex effect.
+- Removed /snow path as the snow simulation is now integrated into the desktop.
+- Added PixelCanvas component used in Snow Simulator for pixel-based rendering.
+- Removed drop-shadow from DesktopIcon component (shadow baked into icon images instead).
+- Added mouse and keyboard callbacks to Window component.
+- Improved Window focus management.
+- Updated LINKS.txt with correct github repository link.
+- Updated repo README with Snow Simulator screenshot.
 
 Version 0.1.0 - 18/11/2025
 

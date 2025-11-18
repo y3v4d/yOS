@@ -22,11 +22,12 @@ The website is built using Svelte and Tailwind CSS, ensuring a responsive and vi
 - TypeScript
 - Vite
 
+## Live Demo
+
+A live demo of yOS can be found at: [https://y3v4d.com](https://y3v4d.com)
+
 ## Image Gallery
 
 ![yOS Desktop Interface](./static/yos-desktop.png)
 ![yOS Multiple Windows](./static/yos-multiple-windows.png)
-
-## Live Demo
-
-A live demo of yOS can be found at: [https://y3v4d.com](https://y3v4d.com)
+![yOS Snow Simulator](./static/yos-snow-simulator.png)
