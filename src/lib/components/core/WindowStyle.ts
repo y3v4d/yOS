@@ -1,0 +1,6 @@
+export enum WindowStyle {
+    DEFAULT = 0b00000000,
+    NO_TITLE_BAR = 0b00000001,
+    NO_BORDER = 0b00000010,
+    NO_SHADOW = 0b00000100
+};

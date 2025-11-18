@@ -1,0 +1,11 @@
+CHANGELOG
+------------------
+
+Version 0.1.0 - 18/11/2025
+
+Initial release of yOS.
+- Added basic window management system with draggable windows.
+- Implemented desktop icons with click functionality.
+- Added audio feedback for desktop icon interactions.
+- Created README, ABOUT ME, LINKS and CHANGELOG files for documentation.
+- Old snow simulation WIP playground moved under /snow path.
