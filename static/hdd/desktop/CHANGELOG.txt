@@ -1,5 +1,13 @@
 CHANGELOG
 ------------------
+Version 0.1.2 - 19/11/2025
+
+- Added Browser application that opens an in-app iframe to browse external websites.
+- Added Match Mayhem (my Fiverr client project) browser-type application as a new desktop icon.
+- Smoothed out Snow Simulator vortex animation, added ambient music and vortex sound effect.
+- Desktop icons are now positioned in a cell layout.
+- Removed links from ABOUT ME document.
+
 Version 0.1.1 - 18/11/2025
 
 - Added Snow Simulator application as a new desktop icon.

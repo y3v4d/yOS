@@ -54,8 +54,6 @@
 
             offsetX = event.clientX - windowElement.offsetLeft;
             offsetY = event.clientY - windowElement.offsetTop;
-
-            onFocusRequested();
         };
 
         const onMouseMove = (event: MouseEvent) => {
@@ -98,6 +96,9 @@
         titleBarElement?.addEventListener("mouseup", onMouseUp);
 
         windowElement.addEventListener("keydown", onWindowKeyDown);
+        windowElement.addEventListener("focusin", () => {
+            onFocusRequested();
+        });
         
         contentElement.addEventListener("mousedown", onContentMouseDown);
         contentElement.addEventListener("mousemove", onContentMouseMove);
@@ -151,7 +152,7 @@
             </button>
         </div>
     {/if}
-    <div bind:this={contentElement} class="relative grow overflow-hidden" style:width="{width}px" style:height="{height}px">
+    <div bind:this={contentElement} class="relative overflow-hidden" style:width="{width}px" style:height="{height}px">
         {@render children?.()}
     </div>
 </div>

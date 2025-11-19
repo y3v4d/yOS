@@ -44,6 +44,7 @@
     } | null = null;
 
     let vortexImage: HTMLImageElement;
+    let vortexAudio: HTMLAudioElement;
     let vortexFrames: ImageData[] = [];
     let vortexFrameIndex = 0;
 
@@ -51,7 +52,7 @@
         vortexImage = new Image();
         vortexImage.src = img_vortex;
         vortexImage.onload = () => {
-            const frames = 8;
+            const frames = 16;
 
             for(let i = 0; i < frames; i++) {
                 const angle = (i / frames) * 2 * Math.PI;
@@ -222,7 +223,9 @@
         const radius = 4;
 
         hole = { x, y, r: radius };
-        console.log(hole);
+        vortexAudio.currentTime = 0;
+        vortexAudio.volume = 0.3;
+        vortexAudio.play();
     }
 
     function onWindowMouseMove(mouseX: number, mouseY: number) {
@@ -238,6 +241,7 @@
 
     function onWindowMouseUp(x: number, y: number) {
         hole = null;
+        vortexAudio.pause();
     }
 
     function onKeyDown(key: string) {
@@ -335,6 +339,8 @@
     mouseUp={onWindowMouseUp}
     keyDown={onKeyDown}
 >
+    <audio src="/snow-ambient.mp3" preload="auto" loop autoplay></audio>
+    <audio bind:this={vortexAudio} src="/vacuum.mp3" preload="auto" loop></audio>
     <PixelCanvas bind:this={pixelCanvas} width={width} height={height} framebufferWidth={framebufferWidth} framebufferHeight={framebufferHeight} />
     {#if helpVisible}
         <div 
