@@ -1,9 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Alumni+Sans+SC:ital,wght@0,100..900;1,100..900&display=swap');
 @import 'tailwindcss';
 
+@theme {
+    --text-xxs: 0.625rem; /* 10px */
+}
+
+@font-face {
+    font-family: "Kenney Mini Square";
+    src: url("/kenney-mini-square.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 
 body {
-    font-family: "Alumni Sans SC", sans-serif;
+    font-family: "Alumni Sans SC", monospace;
     font-optical-sizing: auto;
     font-style: normal;
 }
@@ -13,4 +24,18 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+    overscroll-behavior: none;
+    touch-action: none;
+
+    background-color: #C0C0C0;
+}
+
+.box {
+    @apply border-2 border-t-white border-l-white border-r-gray-600 border-b-gray-600;
+    background-color: #C0C0C0;
+}
+
+.box-inverted, .box:enabled:active {
+    @apply border-2 border-t-gray-600 border-l-gray-600 border-r-white border-b-white;
+    background-color: #C0C0C0;
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
 
     interface Props {
         width: number;
@@ -28,6 +28,15 @@
         ctx = context;
         buffer = ctx.createImageData(framebufferWidth, framebufferHeight);
     });
+
+    $effect(() => {
+        framebufferWidth;
+        framebufferHeight;
+
+        tick().then(() => {
+            buffer = ctx.createImageData(framebufferWidth, framebufferHeight);
+        });
+    })
 
     export function clear(r: number, g: number, b: number, a: number = 255) {
         for(let i = 0; i < buffer.data.length; i += 4) {

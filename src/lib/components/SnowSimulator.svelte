@@ -16,10 +16,10 @@
     let y = $state(150);
     let helpVisible = $state(true);
 
-    const width = 640;
-    const height = 480;
-    const framebufferWidth = 160;
-    const framebufferHeight = 120;
+    let width = $state(640);
+    let height = $state(480);
+    let framebufferWidth = $derived(Math.floor(width / 4));
+    let framebufferHeight = $derived(Math.floor(height / 4));
 
     const snowPalette = [
         "#ffffff", // Pure White
@@ -33,7 +33,7 @@
 
     const snowWeights = [20, 25, 15, 15, 10, 8, 7];
 
-    let map: number[] = Array(framebufferWidth * framebufferHeight).fill(0);
+    let map: number[] = $derived.by(() => Array<number>(framebufferWidth * framebufferHeight).fill(0));
 
     let pixelCanvas: PixelCanvas;
     let fps = $state(0);
@@ -83,6 +83,10 @@
             if(vortexAccumulator >= 100) {
                 vortexAccumulator -= 100;
                 vortexFrameIndex = (vortexFrameIndex + 1) % vortexFrames.length;
+            }
+
+            if(intervalAccumulator > 1000) {
+                intervalAccumulator = 1000;
             }
 
             while(intervalAccumulator >= interval) {
@@ -331,7 +335,7 @@
     {...rest}
 
     bind:x={x} bind:y={y} 
-    width={width} height={height} 
+    bind:width={width} bind:height={height} 
     title="Snow Simulator - FPS {fps}" 
     icon={img_snow_png}
     mouseDown={onWindowMouseDown}

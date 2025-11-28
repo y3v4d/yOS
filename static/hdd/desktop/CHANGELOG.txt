@@ -1,5 +1,23 @@
 CHANGELOG
 ------------------
+
+Version 0.1.3 - 28/11/2025
+
+- Added touch support for dragging windows.
+- Size of the Window is now bindable.
+- Added maximize/minimize functionality to Window component.
+- Added better mobile support for Windows - client width less than 600px now forces windows into maximized state.
+- Changed font to monoscape for better retro aesthetic.
+- PixelCanvas framebuffer is now recreated when its width or height changes.
+- Added custom scrollbar component for TextReader application.
+- Added external Voxelly application as a new desktop icon.
+- Added start bar to the Desktop with start button and system tray with clock.
+- Converted Desktop to not be a Window itself.
+- Updated close button icon.
+- Updated .txt extension icon.
+- Added new site favicon.
+- Removed overscroll behavior.
+
 Version 0.1.2 - 19/11/2025
 
 - Added Browser application that opens an in-app iframe to browse external websites.

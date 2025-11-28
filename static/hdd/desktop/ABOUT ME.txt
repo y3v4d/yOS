@@ -1,5 +1,6 @@
 ABOUT ME
 -------------
+
 Hello! I'm Bartlomiej Wethacz (y3v4d), a passionate software developer with a love for creating low-level applications and exploring new technologies.
 I specialize in game development, low-level programming and web development.
 I enjoy working on projects that challenge me and allow me to learn and grow as a developer.
