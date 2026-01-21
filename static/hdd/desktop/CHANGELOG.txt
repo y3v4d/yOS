@@ -1,6 +1,21 @@
 CHANGELOG
 ------------------
 
+Version 0.2.0 - 21/01/2026
+
+- Added og MS Sans Serif font
+- Added Process that consists of component constructor and parameters
+- Added OSContextProvider used to provide processes and their spawn/kill globally
+- Changed hardcoded applications logic in Desktop to more maintainable generic processes
+- Changed mouse and touch events in Window to generic pointer events
+- Added reusable Button component
+- Extended TextReader to split the raw text into tokens for better link formatting
+- Updated window resizing so windows resize perfectly into available space
+- Visual overhaul to match retro windows style more accuretly with perfect borders
+- Updated LINKS with my Upwork profile link
+- Added CREDITS with legal info and acknowledgments
+- Updated Svelte to ^5.40
+
 Version 0.1.3 - 28/11/2025
 
 - Added touch support for dragging windows.
