@@ -13,10 +13,39 @@
     font-display: swap;
 }
 
-body {
-    font-family: "Alumni Sans SC", monospace;
-    font-optical-sizing: auto;
+@font-face {
+    font-family: "MS Sans Serif";
+    src: url("/ms-sans-serif.ttf") format("truetype");
+
+    font-weight: normal;
     font-style: normal;
+    font-display: swap;
+
+    font-size: 11px;
+}
+
+@font-face {
+    font-family: "MS Sans Serif";
+    src: url("/ms-sans-serif-bold.ttf") format("truetype");
+
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+
+    font-size: 11px;
+}
+
+body {
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeSpeed;
+    font-feature-settings: "liga" off, "clig" off, "calt" off;
+    
+    font-family: "MS Sans Serif", sans-serif;
+    font-optical-sizing: none;
+    font-style: normal;
+
+    font-size: 11px;
 }
 
 html, body {
@@ -38,4 +67,24 @@ html, body {
 .box-inverted, .box:enabled:active {
     @apply border-2 border-t-gray-600 border-l-gray-600 border-r-white border-b-white;
     background-color: #C0C0C0;
+}
+
+.panel-raised {
+    background-color: #C0C0C0;
+    padding: 2px;
+    box-shadow:
+        -1px -1px #0A0A0A inset,
+        1px 1px #FFFFFF inset,
+        -2px -2px #808080 inset,
+        2px 2px #DFDFDF inset;
+}
+
+.panel-lowered {
+    background-color: #C0C0C0;
+    padding: 2px;
+    box-shadow:
+        -1px -1px #FFFFFF inset,
+        1px 1px #0A0A0A inset,
+        -2px -2px #DFDFDF inset,
+        2px 2px #808080 inset;
 }

@@ -1,24 +1,34 @@
 <script lang="ts">
     import DesktopIcon from "$lib/components/DesktopIcon.svelte";
-    import icon_ext_txt from "$lib/assets/icons/icon_extension_txt.png";
+    import icon_notepad_32 from "$lib/assets/icons/icon_notepad_32.png";
+    import icon_notepad_16 from "$lib/assets/icons/icon_notepad_16.png";
     import img_snow_png from "$lib/assets/icons/img_snow_simulator.png";
     import icon_match_mayhem from "$lib/assets/icons/icon_match_mayhem.png";
     import icon_voxelly from "$lib/assets/icons/icon_voxelly.png";
-    import { onMount } from "svelte";
+    import { onMount, type Component } from "svelte";
     import TextReader from "./TextReader.svelte";
     import SnowSimulator from "./SnowSimulator.svelte";
     import Browser from "./Browser.svelte";
+    import { getOSContext, type Executable } from "$lib/contexts/OSContext";
+    import Button from "./core/Button.svelte";
 
-    interface Icon {
+    interface Icon<T extends Record<string, any> = any> {
         x: number,
         y: number,
-        icon: string,
+        icon_32: string,
+        icon_16: string,
         label: string,
-        onClick: () => void
+        executable: Executable<T>
     }
 
-    const DESKTOP_CELL_SIZE_X = 80;
-    const DESKTOP_CELL_SIZE_Y = 100;
+    interface TaskbarItem {
+        process_id: number;
+        label: string;
+        icon: string;
+    }
+
+    const DESKTOP_CELL_SIZE_X = 64;
+    const DESKTOP_CELL_SIZE_Y = 80;
 
     let clientWidth: number = $state(0);
     let clientHeight: number = $state(0);
@@ -32,65 +42,118 @@
 
     let timestamp: number = $state(Date.now());
 
-    let readmeOpened: boolean = $state(true);
-    let aboutmeOpened: boolean = $state(false);
-    let linksOpened: boolean = $state(false);
-    let changelogOpened: boolean = $state(false);
-    let snowSimulatorOpened: boolean = $state(false);
-    let matchMayhemOpened: boolean = $state(false);
-    let voxellyOpened: boolean = $state(false);
+    const context = getOSContext();
+    let taskbar = $state<TaskbarItem[]>([]);
 
-    let icons: Icon[] = [
+    const icons = [
         {
             label: "README",
-            icon: icon_ext_txt,
+            icon_16: icon_notepad_16,
+            icon_32: icon_notepad_32,
             x: gridX(0),
             y: gridY(0),
-            onClick: () => readmeOpened = true
+            executable: {
+                component: TextReader,
+                params: {
+                    filename: "desktop/README.txt"
+                }
+            }
         },
         {
             label: "ABOUT ME",
-            icon: icon_ext_txt,
+            icon_16: icon_notepad_16,
+            icon_32: icon_notepad_32,
             x: gridX(1),
             y: gridY(0),
-            onClick: () => aboutmeOpened = true
+            executable: {
+                component: TextReader,
+                params: {
+                    filename: "desktop/ABOUT ME.txt"
+                }
+            }
         },
         {
             label: "LINKS",
-            icon: icon_ext_txt,
+            icon_16: icon_notepad_16,
+            icon_32: icon_notepad_32,
             x: gridX(2),
             y: gridY(0),
-            onClick: () => linksOpened = true
+            executable: {
+                component: TextReader,
+                params: {
+                    filename: "desktop/LINKS.txt"
+                }
+            }
         },
         {
             label: "CHANGELOG",
-            icon: icon_ext_txt,
+            icon_16: icon_notepad_16,
+            icon_32: icon_notepad_32,
             x: gridX(3),
             y: gridY(0),
-            onClick: () => changelogOpened = true
+            executable: {
+                component: TextReader,
+                params: {
+                    filename: "desktop/CHANGELOG.txt"
+                }
+            }
+        },
+        {
+            label: "CREDITS",
+            icon_16: icon_notepad_16,
+            icon_32: icon_notepad_32,
+            x: gridX(4),
+            y: gridY(0),
+            executable: {
+                component: TextReader,
+                params: {
+                    filename: "desktop/CREDITS.txt"
+                }
+            }
         },
         {
             label: "Snow Simulator",
-            icon: img_snow_png,
+            icon_16: img_snow_png,
+            icon_32: img_snow_png,
             x: gridX(2),
             y: gridY(1),
-            onClick: () => snowSimulatorOpened = true
+            executable: {
+                component: SnowSimulator
+            }
         },
         {
             label: "Match Mayhem",
-            icon: icon_match_mayhem,
+            icon_16: icon_match_mayhem,
+            icon_32: icon_match_mayhem,
             x: gridX(1),
             y: gridY(1),
-            onClick: () => matchMayhemOpened = true
+            executable: {
+                component: Browser,
+                params: {
+                    url: "https://y3v4d.com/match3d",
+                    title: "Match Mayhem",
+                    icon: icon_match_mayhem
+                }
+            }
         },
         {
             label: "Voxelly",
-            icon: icon_voxelly,
+            icon_16: icon_voxelly,
+            icon_32: icon_voxelly,
             x: gridX(0),
             y: gridY(1),
-            onClick: () => voxellyOpened = true
+            executable: {
+                component: Browser,
+                params: {
+                    url: "https://y3v4d.com/voxelly",
+                    title: "Voxelly",
+                    icon: icon_voxelly,
+                    width: 800,
+                    height: 600
+                }
+            }
         }
-    ];
+    ] satisfies Icon[];
 
     let lastFocusedWindow: HTMLDivElement | null = $state(null);
 
@@ -100,16 +163,6 @@
             clientHeight = window.innerHeight;
         };
 
-        const onGlobalClick = (event: Event) => {
-            const isOnStartButton = startButtonElement && (event.target == startButtonElement || startButtonElement.contains(event.target as Node));
-            const isOnStartMenu = startMenuElement && (event.target == startMenuElement || startMenuElement.contains(event.target as Node));
-
-            if(!isOnStartButton && !isOnStartMenu) {
-                startMenuOpened = false;
-            }
-        }
-
-        document.addEventListener("mousedown", onGlobalClick);
         window.addEventListener("resize", handleResize);
         handleResize();
 
@@ -117,20 +170,31 @@
             timestamp = Date.now();
         }, 1000);
 
+        const process = context.spawnExecutable({
+            component: TextReader,
+            params: {
+                filename: "desktop/README.txt"
+            }
+        });
+        taskbar = [...taskbar, {
+            process_id: process.id,
+            label: "README",
+            icon: icon_notepad_16,
+        }];
+
         return () => {
             clearInterval(interval);
 
-            document.removeEventListener("mousedown", onGlobalClick);
             window.removeEventListener("resize", handleResize);
         };
     });
 
     function gridX(x: number) {
-        return x * DESKTOP_CELL_SIZE_X;
+        return DESKTOP_CELL_SIZE_X / 2 + x * DESKTOP_CELL_SIZE_X;
     }
 
     function gridY(y: number) {
-        return y * DESKTOP_CELL_SIZE_Y;
+        return DESKTOP_CELL_SIZE_Y / 2 + y * DESKTOP_CELL_SIZE_Y;
     }
 
     function parseHour(timestamp: number) {
@@ -145,7 +209,7 @@
             hours = 12;
         }
 
-        return `${hours}:${minutes.toString().padStart(2, '0')}${ampm}`;
+        return `${hours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
     }
 
     function parseDate(timestamp: number) {
@@ -181,78 +245,110 @@
     }
 </script>
 
-<div class="w-full h-full bg-[#4A95EA] overflow-hidden font-mono text-xs select-none relative">
+<div class="w-full h-full bg-[#008080] overflow-hidden select-none relative" style="line-height: 12px;">
     <div class="w-full h-full relative overflow-hidden flex flex-col">
         <main class="relative grow" bind:clientWidth={contentWidth} bind:clientHeight={contentHeight}>
             {#each icons as icon (icon.label)}
                 <DesktopIcon 
                     x={icon.x} y={icon.y} 
-                    icon={icon.icon} 
+                    icon={icon.icon_32} 
                     label={icon.label} 
-                    onClick={icon.onClick}
+                    onClick={() => {
+                        const process = context.spawnExecutable<any>(icon.executable);
+                        taskbar = [...taskbar, {
+                            process_id: process.id,
+                            label: icon.label,
+                            icon: icon.icon_16,
+                        }];
+                    }}
                 />
             {/each}
 
-            {#if readmeOpened}
-                <TextReader filename="desktop/README.txt" maximizeRequested={onMaximizeRequested} focusRequested={onFocusRequested} closeRequested={() => readmeOpened = false} />
-            {/if}
-
-            {#if aboutmeOpened}
-                <TextReader filename="desktop/ABOUT ME.txt" maximizeRequested={onMaximizeRequested} focusRequested={onFocusRequested} closeRequested={() => aboutmeOpened = false} />
-            {/if}
-
-            {#if linksOpened}
-                <TextReader filename="desktop/LINKS.txt" maximizeRequested={onMaximizeRequested} focusRequested={onFocusRequested} closeRequested={() => linksOpened = false} />
-            {/if}
-
-            {#if changelogOpened}
-                <TextReader filename="desktop/CHANGELOG.txt" maximizeRequested={onMaximizeRequested} focusRequested={onFocusRequested} closeRequested={() => changelogOpened = false} />
-            {/if}
-
-            {#if snowSimulatorOpened}
-                <SnowSimulator maximizeRequested={onMaximizeRequested} focusRequested={onFocusRequested} closeRequested={() => snowSimulatorOpened = false} />
-            {/if}
-
-            {#if matchMayhemOpened}
-                <Browser 
-                    url="https://y3v4d.com/match3d" icon={icon_match_mayhem} 
-                    title="Match Mayhem"
-                    maximizeRequested={onMaximizeRequested} focusRequested={onFocusRequested} closeRequested={() => matchMayhemOpened = false}
+            {#each context.getProcesses() as process (process.id)}
+                <process.executable.component 
+                    {...process.executable.params} 
+                    maximizeRequested={onMaximizeRequested} 
+                    focusRequested={onFocusRequested} 
+                    closeRequested={() => {
+                        taskbar = taskbar.filter(item => item.process_id !== process.id);
+                        context.killProcess(process.id);
+                    }}
                 />
-            {/if}
+            {/each}
 
-            {#if voxellyOpened}
-                <Browser
-                    url="https://y3v4d.com/voxelly"
-                    title="Voxelly" icon={icon_voxelly}
-                    width={800} height={600}
-                    maximizeRequested={onMaximizeRequested} focusRequested={onFocusRequested} closeRequested={() => voxellyOpened = false}
-                />
-            {/if}
-
-            <div class="absolute bottom-1 right-2 text-xs text-[#1762B7] font-semibold">
-                © 2025 y3v4d
+            <div class="absolute bottom-1 right-2 text-black font-semibold">
+                © 2026 y3v4d
             </div>
         </main>
-        <div class="bg-[#C0C0C0] h-9 border-t-white border-t-2 text-white items-center flex select-none relative">
-            <button 
-                bind:this={startButtonElement}
-                class="h-8 px-0.5 cursor-pointer active:scale-95"
-                onclick={() => startMenuOpened = !startMenuOpened}
-            >
-                <img src="/logo.png" alt="yOS Logo" class="h-full w-auto"/>
-            </button>
-            <div class="grow"></div>
-            <div class="flex items-center gap-1 mx-1 h-7 px-1.5  text-black box-inverted">
-                <span class="text-xxs leading-3">{parseHour(timestamp)}</span>
-                <span class="text-xxs leading-3">{parseDate(timestamp)}</span>
+        <div class="panel-raised flex w-full items-center select-none" style="padding: 3px;">
+            <Button onclick={() => startMenuOpened = !startMenuOpened} style="padding: 3px 5px 3px 3px; min-width: fit-content;">
+                <div class="flex items-center justify-center gap-0.5">
+                    <img src="/logo.png" alt="yOS Logo" class="h-4 w-4" style="image-rendering: pixelated;"/>
+                    <p>Start</p>
+                </div>
+            </Button>
+            <div class="separator"></div>
+            <div class="grow overflow-hidden">
+                <div class="flex gap-1">
+                    {#each taskbar as item (item.process_id)}
+                        <button class="panel-raised taskbar-button min-w-fit">
+                            <img src={item.icon} alt="icon" class="w-4 h-4" style="image-rendering: pixelated;" />
+                            <p>{item.label}</p>
+                        </button>
+                    {/each}
+                </div>
+            </div>
+            <div class="separator"></div>
+            <div class="clockbar" style="min-width: fit-content;">
+                <span class="leading-3">{parseHour(timestamp)}</span>
+                <span class="leading-3">{parseDate(timestamp)}</span>
             </div>
 
             {#if startMenuOpened}
-                <div bind:this={startMenuElement} class="absolute left-0 bottom-8 w-64 h-96 box !border-l-0 z-50">
+                <div bind:this={startMenuElement} class="absolute left-0 bottom-7 w-64 h-96 panel-raised z-50">
 
                 </div>
             {/if}
         </div>
     </div>
 </div>
+
+<style lang="postcss">
+    @reference "$src/app.css";
+
+    .clockbar {
+        background-color: #C0C0C0;
+
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        padding: 5px 6px;
+
+        box-shadow: -1px -1px #DFDFDF inset,
+                    1px 1px #808080 inset;
+
+        color: black;
+    }
+
+    .separator {
+        width: 2px;
+        height: 21px;
+
+        margin: 0px 3px 1px 3px;
+
+        box-shadow: -1px 0px #FFFFFF inset,
+                    1px 0px #808080 inset;
+    }
+
+    .taskbar-button {
+        display: flex;
+        align-items: center;
+
+        gap: 3px;
+        padding: 3px 5px 3px 3px;
+
+        color: black;
+
+    }
+</style>
