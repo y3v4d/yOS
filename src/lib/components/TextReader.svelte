@@ -92,7 +92,7 @@
             updateScrollHandle();
         });
 
-        fetch(`/hdd/${filename}`)
+        fetch(`/hdd/${filename}?t=0.2.0`)
         .then(async (response) => {
             if(!response.ok) {
                 content = `ERROR: Could not load file "${filename}".`;
