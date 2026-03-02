@@ -19,6 +19,25 @@ class yTaskManager extends Executable {
             const applications: ApplicationInfo[] = clients.map(client => this._windowToAppInfo(client));
 
             this._ipc.update_applications?.(applications);
+        },
+
+        on_kill_process: (pid: number) => {
+            this.kernel.killProcess(pid);
+        },
+
+        on_kill_application: (windowId: number) => {
+            const rootWindow = this.x11.getRootWindow();
+            const clients = rootWindow.props["_NET_CLIENT_LIST"] as XWindow[] || [];
+            const targetClient = clients.find(client => client.id === windowId);
+            if(targetClient) {
+                this.x11.sendEvent(this._display, targetClient, {
+                    window: targetClient,
+                    display: this._display,
+                    
+                    type: XEventType.CLIENT_MESSAGE,
+                    client_message_type: "WM_DELETE_WINDOW"
+                });
+            }
         }
     }
 

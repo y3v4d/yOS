@@ -138,6 +138,12 @@ export class X11 extends Library {
     }
 
     closeDisplay(display: XDisplay) {
+        for(const [windowId, subscribers] of this._subscribers.entries()) {
+            if(subscribers.has(display)) {
+                subscribers.delete(display);
+            }
+        }
+
         this._clients.delete(display.id);
     }
     
@@ -578,8 +584,6 @@ export class X11 extends Library {
             window.parent.children = window.parent.children.filter(c => c.id !== window.id);
             window.parent.dom.removeChild(window.dom);
         }
-
-        
 
         newParent.children.push(window);
         window.parent = newParent;
