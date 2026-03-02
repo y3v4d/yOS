@@ -1,9 +1,0 @@
-This project uses a recreation of classic Windows-style UI for educational and portfolio purposes only.
-It is not affiliated with or endorsed by Microsoft.
-
-Design and assets are heavily inspired by Windows 2000.
-Design reference: Figma file by PatrickWindowsConcept - https://www.figma.com/community/file/1335360360324685855
-
-All rights to Microsoft and their respective owners.
-
-yOS - Copyright (c) 2026 y3v4d
