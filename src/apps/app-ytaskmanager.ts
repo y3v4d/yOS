@@ -15,7 +15,7 @@ class yTaskManager extends Executable {
             this._ipc.update_processes?.(this.kernel.listProcesses());
 
             const rootWindow = this.x11.getRootWindow();
-            const clients = rootWindow.props["_NET_CLIENT_LIST"] as XWindow[] || [];
+            const clients = (rootWindow.props["_NET_CLIENT_LIST"] as XWindow[]).filter(client => client.props["_NET_WM_WINDOW_TYPE"] === "_NET_WM_WINDOW_TYPE_NORMAL") || [];
             const applications: ApplicationInfo[] = clients.map(client => this._windowToAppInfo(client));
 
             this._ipc.update_applications?.(applications);

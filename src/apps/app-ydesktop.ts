@@ -4,7 +4,6 @@ import { Executable, Kernel, KernelEventQueue } from "../yos/core/kernel";
 import { XEventMask, XEventType, type X11, type XDisplay, type XWindow } from "../yos/core/x11";
 import PathUtils from "../yos/utils/path-utils";
 import type { DirEntry } from "../yos/core/vfs";
-import { BinaryReader } from "../yos/utils/binary-reader";
 
 import icon_txt_32 from "../assets/icons/icon_txt_32.png";
 import { VfsFormtUtils } from "../yos/utils/vfs-utils";
@@ -18,6 +17,7 @@ class yDesktop extends Executable {
 
     private _ipc: DesktopIPC = {
         on_context_mount: () => {
+            this._ipc.update_entry_size?.(80, 80);
             this._ipc.update_files?.(this._getDesktopFiles());
             this._ipc.update_tree?.(this._buildWindowTree());
             this._ipc.update_processes?.(this.kernel.listProcesses());
@@ -189,7 +189,9 @@ class yDesktop extends Executable {
                     name: file.name,
                     ext: PathUtils.extname(file.name).slice(1),
                     type: file.type === 1 ? "directory" : "file",
-                    stat: file
+                    stat: file,
+                    x: -1,
+                    y: -1
                 };
 
                 if(entry.ext === "exe") {

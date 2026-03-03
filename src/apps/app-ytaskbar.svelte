@@ -53,7 +53,7 @@
     $inspect("shouldHideNames", shouldHideNames);
 
     onMount(() => {
-        taskbar = x11.getRootWindow().props["_NET_CLIENT_LIST"]?.map((win: XWindow) => win.id) || [];
+        taskbar = (x11.getRootWindow().props["_NET_CLIENT_LIST"] as any[])?.filter(client => client.props["_NET_WM_WINDOW_TYPE"] === "_NET_WM_WINDOW_TYPE_NORMAL").map((win: XWindow) => win.id) || [];
         activeWindowId = x11.getRootWindow().props["_NET_ACTIVE_WINDOW"]?.id || -1;
 
         emitter.on("clients:updated", onClientsUpdated);

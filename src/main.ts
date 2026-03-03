@@ -165,8 +165,8 @@ installDevApp("app-ydesktop.svelte");*/
   setTimeout(() => {
     console.log("VFS Structure:");
 
-    kernel.vfs.printStructure();
-    kernel.vfs.printBlocks();
+    //kernel.vfs.printStructure();
+    //kernel.vfs.printBlocks();
 
     const dir = kernel.vfs.opendir("/home/y3v4d/desktop");
     const entires = [];

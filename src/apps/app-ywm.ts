@@ -296,7 +296,7 @@ class yWM extends Executable {
         this._clients.set(event.window.id, client);
         this._layers[layer].push(client);
 
-       //this._updateNetClientList();
+        //this._updateNetClientList();
         this._syncWindowStacking();
 
         this.x11.mapWindow(this._display, frame);
