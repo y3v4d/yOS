@@ -34,6 +34,24 @@
     let focused = $state(false);
     let maximized = $state(false);
     let lastGeometry = $state<{ x: number; y: number; width: number; height: number } | null>(null);
+
+    function unmaximize() {
+        if(!lastGeometry) return;
+
+        x11.configureWindow(display, frame, {
+            x: lastGeometry.x,
+            y: lastGeometry.y,
+            width: lastGeometry.width,
+            height: lastGeometry.height
+        });
+
+        x11.configureWindow(display, window, {
+            width: lastGeometry.width - client.borderWidth * 2,
+            height: lastGeometry.height - client.titlebarHeight - client.borderWidth * 2
+        });
+
+        maximized = false;
+    }
     
     const onCloseButtonClick = () => {
         x11.sendEvent(display, window, {
@@ -51,21 +69,7 @@
 
     const onMaximizeButtonClick = () => {
         if(maximized) {
-            if(!lastGeometry) return;
-
-            x11.configureWindow(display, frame, {
-                x: lastGeometry.x,
-                y: lastGeometry.y,
-                width: lastGeometry.width,
-                height: lastGeometry.height
-            });
-
-            x11.configureWindow(display, window, {
-                width: lastGeometry.width - client.borderWidth * 2,
-                height: lastGeometry.height - client.titlebarHeight - client.borderWidth * 2
-            });
-
-            maximized = false;
+            unmaximize();
             return;
         }
 
@@ -128,6 +132,13 @@
         const target = event.currentTarget as HTMLElement;
         if(!target.hasPointerCapture(event.pointerId)) {
             return;
+        }
+
+        if(maximized) {
+            unmaximize();
+            
+            pointerOffsetX = event.clientX - event.clientX + window.width / 4;
+            pointerOffsetY = event.clientY ;
         }
 
         const newX = event.clientX - pointerOffsetX;

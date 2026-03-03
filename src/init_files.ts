@@ -1,6 +1,6 @@
 import { BinaryWriter, type Kernel } from "./yos";
 
-const readmeContent = `yOS - Web Operating System v0.3.0
+const readmeContent = `yOS - Web Operating System v0.3.1
 --------------------------------------------------
 
 Welcome to yOS, an experimental operating system-like environment built using TypeScript.
@@ -93,6 +93,21 @@ This project is a work in progress and is constantly evolving as I learn and exp
 
 const changelogContent = `CHANGELOG
 ------------------
+
+Version 0.3.1 - 03/03/2026
+
+- Added proper desktop grid system for desktop icons with automatic positioning and collision avoidance.
+- Added ability to move desktop icons by dragging them around.
+- Added blue overlay over selected desktop icon.
+- X11 attachContext function now doesn't create context (again), instead context is created after first mapping of the window.
+  This prevents any potential issues with immediate Svelte lifecycle callbacks and effects firing before the DOM is rendered,
+  which causes hard to track errors when it comes to DOM size and position measurements.
+- Task Manager applications are now always filtered to only include NORMAL type windows.
+- Taskbar tabs are now always filtered to only include NORMAL type windows.
+- Added End Task/Process functionality to Task Manager application.
+- X11 closeDisplay function now properly removes the connection from any window subscriber lists.
+- Dragged windows are now automatically unmaximized.
+- Added /dist to .gitignore to avoid committing build artifacts.
 
 Version 0.3.0 - 02/03/2026
 

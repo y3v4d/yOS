@@ -7,6 +7,8 @@
         update_processes?: (processes: Process[]) => void;
 
         on_context_mount: () => void;
+        on_kill_process: (pid: number) => void;
+        on_kill_application: (windowId: number) => void;
     }
 
     export interface ApplicationInfo {
@@ -19,6 +21,7 @@
 <script lang="ts">
     import icon_default_16 from '../assets/icons/executable_16.png';
     import PathUtils from '../yos/utils/path-utils';
+    import Button from './Button.svelte';
 
     interface TaskManagerParams {
         ipc: TaskManagerIPC;
@@ -30,6 +33,9 @@
 
     let applications = $state<ApplicationInfo[]>([]);
     let processes = $state<Process[]>([]);
+
+    let selectedApplicationId = $state<number>(-1);
+    let selectedProcessId = $state<number>(-1);
     
     onMount(() => {
         ipc.update_applications = (apps) => {
@@ -45,6 +51,16 @@
 
     type Tab = "applications" | "processes" | "performance";
     let tab: Tab = $state("applications");
+
+    const handleEndTask = () => {
+        if(tab === "applications" && selectedApplicationId !== -1) {
+            ipc.on_kill_application(selectedApplicationId);
+            selectedApplicationId = -1;
+        } else if(tab === "processes" && selectedProcessId !== -1) {
+            ipc.on_kill_process(selectedProcessId);
+            selectedProcessId = -1;
+        }
+    }
 </script>
 
 <main class="container">
@@ -67,7 +83,11 @@
                 <button
                     class="content-nav-item"
                     class:content-nav-item--selected={tab === group}
-                    onclick={() => tab = group}
+                    onclick={() => {
+                        tab = group;
+                        selectedApplicationId = -1;
+                        selectedProcessId = -1;
+                    }}
                 >
                     {label}
                 </button>
@@ -87,8 +107,11 @@
                     <div class="content-box-content-wrapper no-scrollbar">
                         <div class="content-box-content">
                             {#each applications as app}
-                                <div class="content-box-row">
-                                    <div class="application-entry">
+                                <button 
+                                    class="content-box-row" 
+                                    onclick={() => selectedApplicationId = app.windowId}
+                                >
+                                    <div class="application-entry" class:application-entry--selected={selectedApplicationId === app.windowId}>
                                         <img src={app.icon ? app.icon : icon_default_16} alt="icon" width="16" height="16" style="image-rendering: pixelated;" />
                                         <p>{app.title}</p>
                                     </div>
@@ -98,7 +121,7 @@
                                             Running
                                         </p>
                                     </div>
-                                </div>
+                                </button>
                             {/each}
                         </div>
                     </div>
@@ -110,14 +133,26 @@
                     <div class="content-box-content no-scrollbar">
                         {#each processes as process}
                             {@const exeName = PathUtils.basename(process.path || "") || "Unnammed Executable"}
-                            <div class="content-box-row">
+                            <button class="content-box-row" class:content-box-row--selected={selectedProcessId === process.pid} onclick={() => selectedProcessId = process.pid}>
                                 <div class="process-name">{exeName}</div>
                                 <div class="process-pid">{process.pid}</div>
-                            </div>
+                            </button>
                         {/each}
                     </div>
                 {:else if tab === "performance"}
                     <p style="padding: 4px;">Performance metrics would go here.</p>
+                {/if}
+            </div>
+            
+            <div style="display: flex; flex-direction: row; justify-content: flex-end;">
+                {#if tab == "applications"}
+                    <Button style="height: 23px; width: 80px;" onclick={handleEndTask} disabled={selectedApplicationId === -1}>
+                        <p>End Task</p>
+                    </Button>
+                {:else if tab == "processes"}
+                    <Button style="height: 23px; width: 80px;" onclick={handleEndTask} disabled={selectedProcessId === -1}>
+                        <p>End Process</p>
+                    </Button>
                 {/if}
             </div>
         </div>
@@ -136,6 +171,7 @@
 
     .process-name {
         padding-left: 4px;
+        text-align: left;
     }
 
     .process-pid {
@@ -150,6 +186,11 @@
 
         padding-left: 4px;
         gap: 4px;
+    }
+
+    .application-entry--selected {
+        background-color: #0A246A;
+        color: white;
     }
 
     .application-status {
@@ -176,8 +217,15 @@
     .content-box-row {
         display: grid;
         grid-template-columns: 3fr 1fr;
+        height: 18px;
+        line-height: 1;
 
         padding: 2px 0px;
+    }
+
+    .content-box-row--selected {
+        background-color: #0A246A;
+        color: white;
     }
 
     .content-box-header {
@@ -241,7 +289,11 @@
         flex-grow: 1;
         overflow: hidden;
 
+        display: flex;
+        flex-direction: column;
+
         padding: 12px;
+        gap: 6px;
 
         box-shadow: 
             1px 0px #ffffff inset,
@@ -251,8 +303,7 @@
     }
 
     .content-box {
-        width: 100%;
-        height: calc(100% - 24px);
+        flex: 1;
 
         overflow: hidden;
 

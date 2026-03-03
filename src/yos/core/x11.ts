@@ -138,6 +138,12 @@ export class X11 extends Library {
     }
 
     closeDisplay(display: XDisplay) {
+        for(const [windowId, subscribers] of this._subscribers.entries()) {
+            if(subscribers.has(display)) {
+                subscribers.delete(display);
+            }
+        }
+
         this._clients.delete(display.id);
     }
     
@@ -195,12 +201,12 @@ export class X11 extends Library {
             throw new Error(`X11: Window id ${window.id} already has a context attached`);
         }
 
-        const unmount = context(window.dom);
+        //const unmount = context(window.dom);
 
         this._contexts.set(window.id, context);
-        this._contextUnmounts.set(window.id, unmount);
+        //this._contextUnmounts.set(window.id, unmount);
 
-        console.log(`X11: Mounted context for window id ${window.id}`);
+        console.log(`X11: Attached context for window id ${window.id}`);
     }
 
     destroyContext(display: XDisplay, window: XWindow) {
@@ -357,14 +363,14 @@ export class X11 extends Library {
             not when it's actually mounted in the DOM, so that might cause issues with immediate DOM manipulations or measurements
             that depend on the DOM being mounted.
         */
-        /*if(this._contexts.has(window.id) && !this._contextUnmounts.has(window.id)) {
+        if(this._contexts.has(window.id) && !this._contextUnmounts.has(window.id)) {
             const context = this._contexts.get(window.id)!;
             const unmount = context(window.dom);
 
             this._contextUnmounts.set(window.id, unmount);
 
             console.log(`X11: Mounted context for window id ${window.id}`);
-        }*/
+        }
 
         const event = {
             type: XEventType.MAP_NOTIFY,
@@ -578,8 +584,6 @@ export class X11 extends Library {
             window.parent.children = window.parent.children.filter(c => c.id !== window.id);
             window.parent.dom.removeChild(window.dom);
         }
-
-        
 
         newParent.children.push(window);
         window.parent = newParent;
