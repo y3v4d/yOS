@@ -38,6 +38,7 @@
     import type { DirEntry } from "../yos/core/vfs";
 
     import icon_executable_32 from "../assets/icons/icon_executable_32.png";
+    import icon_shortcut_overlay from "../assets/icons/icon_shortcut_overlay.png";
 
     interface DesktopParams {
         ipc: DesktopIPC;
@@ -294,6 +295,15 @@
                     opacity: {active && lastSelectedEntryIndex === index ? 0.5 : 0}; 
                     pointer-events: none;"
                 ></div>
+                {#if entry.ext === "lnk"}
+                    <img 
+                        src={icon_shortcut_overlay}
+                        alt="shortcut overlay" 
+                        width={11} 
+                        height={11} 
+                        style="position: absolute; bottom: 0; left: 0; image-rendering: pixelated; pointer-events: none;"
+                    >
+                {/if}
             </div>
             
             <span 
@@ -301,7 +311,7 @@
                 class:desktop-icon__label__selected={active && lastSelectedEntryIndex === index}
                 class:desktop-icon__label__selected_full={lastSelectedEntryIndex === index}
             >
-                {entry.name}
+                {entry.name.split(".")[0]}
             </span>
         </button>
     {/each}

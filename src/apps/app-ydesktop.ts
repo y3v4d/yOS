@@ -36,6 +36,16 @@ class yDesktop extends Executable {
             const ext = PathUtils.extname(stat.name).slice(1);
             if(ext === "exe") {
                 this.kernel.execve(path);
+            } else if(ext === "lnk") {
+                const formatUtils = new VfsFormtUtils(this.kernel.vfs);
+                const { targetPath, icon, props } = formatUtils.readShortcut(path);
+                const targetExt = PathUtils.extname(targetPath).slice(1);
+
+                if(targetExt === "exe") {
+                    this.kernel.execve(targetPath, props);
+                } else if(targetExt === "txt") {
+                    this.kernel.execve(targetPath, { filename: targetPath });
+                }
             } else if(ext === "txt") {
                 this.kernel.execve(path, { filename: path });
             }
@@ -201,6 +211,25 @@ class yDesktop extends Executable {
                     const { executable, icon } = formatUtils.readExecutable(path);
 
                     entry.icon = icon ? icon : undefined;
+                } else if(entry.ext === "lnk") {
+                    const formatUtils = new VfsFormtUtils(this.kernel.vfs);
+
+                    const path = "/home/y3v4d/desktop/" + entry.name;
+                    const { targetPath, icon, props } = formatUtils.readShortcut(path);
+                    const targetExt = PathUtils.extname(targetPath).slice(1);
+
+                    if(icon) {
+                        entry.icon = icon;
+                    } else {
+                        if(targetExt === "exe") {
+                            const { executable, icon } = formatUtils.readExecutable(targetPath);
+                            entry.icon = icon ? icon : undefined;
+                        } else if(targetExt === "txt") {
+                            entry.icon = icon_txt_32;
+                        } else {
+                            entry.icon = undefined;
+                        }
+                    }
                 } else if(entry.ext === "txt") {
                     entry.icon = icon_txt_32;
                 } else {

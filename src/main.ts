@@ -74,35 +74,6 @@ async function main() {
 
 installDevApp("app-ydesktop.svelte");*/
 
-  /*const display = x11.openDisplay();
-
-  const popup = x11.createWindow(display, x11.getRootWindow());
-
-  x11.setWindowBackgroundColor(display, popup, "#FFFFE0");
-  x11.changeProperty(display, popup, "_NET_WM_NAME", "Popup Window");
-  x11.changeProperty(display, popup, "_NET_WM_WINDOW_TYPE", "_NET_WM_WINDOW_TYPE_POPUP_MENU");
-  x11.attachContext(display, popup, createVueContext({
-    data() {
-      return {
-        visible: true
-      }
-    },
-    template: `
-      <div v-if="visible" style="padding: 2px 8px; border: 1px solid black; height: 100%;">
-        <h2 style="padding: 8px 0px; margin: 0px;">Popup Window</h2>
-        <p>This is a popup window using Vue 3 context!</p>
-      </div>
-    `
-  }, {}));
-
-  x11.mapWindow(display, popup);
-  x11.configureWindow(display, popup, {
-      width: 200,
-      height: 70,
-      x: window.innerWidth - 204,
-      y: window.innerHeight - 99
-  });*/
-
   init_files(kernel);
 
   kernel.vfs.mkdir("/tmp/test");
@@ -131,35 +102,55 @@ installDevApp("app-ydesktop.svelte");*/
   );
 
   formatUtils.createExecutable(
-    "/home/y3v4d/desktop/yTaskManager",
+    "/etc/applications/yBrowser",
+    "app-ybrowser"
+  );
+
+  formatUtils.createExecutable(
+    "/etc/applications/yTaskManager",
     "app-ytaskmanager",
     icon_taskmanager_32
   );
 
   formatUtils.createExecutable(
-    "/home/y3v4d/desktop/Vue 3 Context Demo",
+    "/etc/applications/vue3-context-demo",
     "app-vue3-context-demo",
     icon_vue_32
   );
 
   formatUtils.createExecutable(
-    "/home/y3v4d/desktop/Svelte 5 Context Demo",
+    "/etc/applications/svelte-context-demo",
     "app-svelte-context-demo",
     icon_svelte_16
   );
 
-  formatUtils.createExecutable(
+  formatUtils.createShortcut(
     "/home/y3v4d/desktop/Voxelly",
-    "app-ybrowser",
+    "/etc/applications/yBrowser.exe",
     undefined,
     { url: "https://y3v4d.com/voxelly", title: "Voxelly - IFrame" }
   );
 
-  formatUtils.createExecutable(
+  formatUtils.createShortcut(
     "/home/y3v4d/desktop/Match Mayhem",
-    "app-ybrowser",
+    "/etc/applications/yBrowser.exe",
     undefined,
     { url: "https://y3v4d.com/match3d", title: "Match Mayhem - IFrame", width: 300, height: 600 }
+  );
+
+  formatUtils.createShortcut(
+    "/home/y3v4d/desktop/yTaskManager",
+    "/etc/applications/yTaskManager.exe"
+  );
+
+  formatUtils.createShortcut(
+    "/home/y3v4d/desktop/Vue 3 Context Demo",
+    "/etc/applications/vue3-context-demo.exe"
+  );
+
+  formatUtils.createShortcut(
+    "/home/y3v4d/desktop/Svelte Context Demo",
+    "/etc/applications/svelte-context-demo.exe"
   );
 
   setTimeout(() => {
