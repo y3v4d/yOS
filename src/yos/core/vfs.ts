@@ -1,4 +1,3 @@
-import { BinaryReader } from "../utils/binary-reader";
 import { TreeNode } from "../utils/tree";
 import type { Kernel } from "./kernel";
 
@@ -132,6 +131,32 @@ class VFS {
 
             position: 0
         } satisfies FileDescriptor;
+    }
+
+    rm(path: string) {
+        const { parent, name } = this._getParentAndName(path);
+        if(parent.value.type !== FileType.DIRECTORY) {
+            throw new Error("Parent is not a directory");
+        }
+
+        let node: TreeNode<DirEntry> | null = null;
+        for(const child of parent.iter_children()) {
+            if(child.value.name === name) {
+                node = child;
+                break;
+            }
+        }
+
+        if(!node) {
+            throw new Error(`File or directory does not exist: ${path}`);
+        }
+
+        parent.removeChild(node);
+        
+        this._inodes.delete(node.value.inode);
+        this._dataBlocks.delete(node.value.inode);
+
+        this.kernel.emit({ type: "file:deleted", path });
     }
 
     write(fd: FileDescriptor, data: Uint8Array) { // writes to files, always replace existing data
@@ -299,9 +324,9 @@ class VFS {
 
     printBlocks(): void {
         for(const [id, data] of this._dataBlocks) {
-            const binaryReader = new BinaryReader(data);
-            const length = binaryReader.uint32();
-            const text = binaryReader.string(length);
+            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+            const length = view.getUint32(0, true);
+            const text = new TextDecoder().decode(data.slice(4, 4 + length));
 
             console.log(`Block iNode #${id} - ${text}`);
         }

@@ -1,0 +1,15 @@
+ABOUT yOS
+----------------
+
+yOS is an experimental operating system-like environment built using TypeScript.
+
+It was originally created as simple a OS looking website to showcase my other projects in an fun and interactive way. 
+Desktop, Toolbar or application windows were nothing more than simple Svelte components, without any OS resembling structure underneath them, but has since evolved into a more complex project.
+
+Currently, yOS core is fully web framework-agnostic and features kernel, virtual file system, audio core, registry and X11-inspired display server.
+Everything else is built as applications or libraries that run on top of the core.
+
+Included applications, like yWM (window manager), yDesktop, yTaskbar etc., are built using Svelte 5 renderer, utilizing context API for seamless integration with the underlying yOS core.
+It is also possible to attach other UI frameworks via the context system, as demonstrated in the Vue 3 Context Demo application.
+
+This project is a work in progress and is constantly evolving as I learn and experiment with new ideas.
