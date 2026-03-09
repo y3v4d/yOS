@@ -72,6 +72,9 @@ export default async function(args) {
         await x11.destroyWindow(display, frame);
     }
 
+    await x11.changeProperty(display, rootWindow, "_NET_CLIENT_LIST", []);
+    await x11.changeProperty(display, rootWindow, "_NET_CLIENT_LIST_STACKING", []);
+
     await x11.closeDisplay(display);
 }
 
