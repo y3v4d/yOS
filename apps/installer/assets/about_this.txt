@@ -1,15 +1,34 @@
 ABOUT yOS
 ----------------
+yOS started as a simple portfolio website — a Windows 2000-looking desktop where you could
+click icons on desktop mockup to see my projects in a fun os-like way, running as a regular SvelteKit app. 
+The windows, taskbar and desktop were nothing more than Svelte components styled to look like an OS.
 
-yOS is an experimental operating system-like environment built using TypeScript.
+I hit the first wall when I wanted applications to be more than just simple components. I wanted to have
+a centralised way to manage application state, keep track of opened windows, and generally have a more 
+realistic application launching and management system.
 
-It was originally created as simple a OS looking website to showcase my other projects in an fun and interactive way. 
-Desktop, Toolbar or application windows were nothing more than simple Svelte components, without any OS resembling structure underneath them, but has since evolved into a more complex project.
+I started looking at projects like OS.js, but they didn't match what I already knew about Linux and X11 system,
+and started wondering if I can improve on those ideas and make something that works more like a real OS under the hood, 
+with a real kernel, display server and window manager.
 
-Currently, yOS core is fully web framework-agnostic and features kernel, virtual file system, audio core, registry and X11-inspired display server.
-Everything else is built as applications or libraries that run on top of the core.
+So I started rewriting everything. First I implemented a simple kernel with process management, in-memory virtual filesystem,
+an service that worked as merge of X11 server and client library and a window manager that used this service object directly
+to manage windows. It resembled a real OS much more, but I was still bothered by the fact that apps are baked into the 
+OS source code. I wanted them to be completely separate, with ability to download them from the network, save them as
+actual executable files on the filesystem and run them dynamically by loading their code.
 
-Included applications, like yWM (window manager), yDesktop, yTaskbar etc., are built using Svelte 5 renderer, utilizing context API for seamless integration with the underlying yOS core.
-It is also possible to attach other UI frameworks via the context system, as demonstrated in the Vue 3 Context Demo application.
+After I discovered the Function constructor (which I had no idea about before), everything clicked and I was able to implement
+a system where apps and libraries are fully separate from the kernel, can be downloaded and saved to the filesystem and
+then loaded and executed dynamically by the kernel.
+I had to rewrite the weird X11-like system I had, to actually be split into a server - application that does all the things
+X11 does, and a client library that can be loaded by any app and can communicate with the server over sockets.
 
-This project is a work in progress and is constantly evolving as I learn and experiment with new ideas.
+The most recent rewrite was the VFS, which now uses IndexedDB for storage, making the filesystem persistent and more realistic, 
+with asynchronous file operations and all.
+
+Current result is a already pretty solid, but I'm yet to experiment with WebWorkers for true multi-threading, and there are a lot
+of basic applications still missing, like file manager, terminal emulator, settings app and so on. 
+But the core system is there, and it's pretty nice to look at it already.
+
+The project is still in progress, so stay tuned for more updates and improvements!

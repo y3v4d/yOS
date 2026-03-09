@@ -1,38 +1,55 @@
-# yOS - A portfolio website showcasing my projects, skills, and experiences as a developer.
+# yOS - A Unix-like operating system running in the browser.
 
 ## Overview
+yOS started as a portfolio website with a Windows 2000-inspired desktop UI, and evolved into a genuinely Unix-like and framework-agnostic operating system running entirely in the browser. The system is built around a lean kernel that manages processes, IPC, and a virtual filesystem — with all higher-level functionality like the display server and window manager implemented as separate userspace applications communicating over kernel primitives, trying to mirror how a real Unix system is structured.
 
-yOS is a architecturally unique portfolio website that mimics a desktop operating system environment. It allows visitors to interact with my projects and skills as if they were using a real desktop, providing an engaging and immersive experience. The core of yOS is framework-agnostic, built using TypeScript and designed to be easily adaptable to various frontend frameworks. The current implementation uses Svelte for most of the UI components, while the underlying window management and application execution logic is built in a framework-agnostic manner, allowing for attachement of different frontend frameworks through context system and X11-like display server.
+## Architecture
+The kernel is intentionally minimal, exposing low-level primitives that userspace applications build on top of:
 
-*Project is still a very early work in progress and many features are yet to be implemented.*
+- **Process management** — applications are compiled to IIFE bundles, stored on the VFS as executable files, and launched by the kernel using the Function constructor. Each process receives a proxied `kernel` object that tracks the calling process for all kernel calls and allows the kernel to manage resources and permissions on a per-process basis.
+- **Shared libraries** - since applications are built with Vite and bundled as IIFEs, they can treat any dependencies as external (e.g. `svelte` or `vue`) to reduce their file size, if those dependencies already exist in the system in form of libraries. Using Vite, those external dependencies need to be associated with synchronous global variables (like `svelte` namespace which can map to `include('svelte').core`), which is exactly what the `include` global function does - it uses asynchronously loaded libraries before the application code runs, but exposes them as synchronous globals, allowing apps to use them without worrying about the asynchronous nature of the VFS.
+- **Unix domain sockets** — the kernel implements `socket`, `bind`, `listen`, `accept`, `connect`, `send` and `readv`, mirroring their Linux equivalents. All interprocess communication is built on top of these primitives.
+- **Virtual filesystem** — an inode and block based VFS backed by IndexedDB for persistence across page loads. Supports file descriptors, `open`,  `mkdir`, `rmdir`, `unlink`, `read`, `write`, `lseek`, `fseek`, `opendir`, `readdir` and standard path resolution.
+- **Dynamic library loading** — `dlopen` allows processes to asynchronously load libraries from the VFS at runtime, mirroring the Unix `dlopen` function.
 
-## Features
+## Display System
+The display system is split into two parts mirroring X11:
 
-- Framework-agnostic core architecture with TypeScript, allowing for easy integration of different frontend frameworks.
-- Svelte 5 used for rendering applications and UI components, with a context system to allow for integration of other frameworks like Vue3.
-- X11-inspired display server for managing windows and rendering the graphical interface.
-- yWM window manager with draggable and resizable windows, built on top of the display server.
-- yDesktop application serving as the main desktop environment with wallpaper and desktop icons.
-- yTaskbar application serving as the taskbar with start menu, application list and system tray.
-- yTaskManager application to view and manage running applications and processes.
-- yNotepad application to view and edit text files from the virtual file system.
-- Virtual file system (VFS) with basic file and directory operations.
-- Audio core for managing audio playback and sound effects.
-- Registry for storing and retrieving global entries like executables and applications.
+- **Y11 server** — a userspace application that manages connected clients, window state, input events and the DOM. Clients communicate with it exclusively over kernel sockets.
+- **Y11 client library** — a library that implements a subset of the X11 protocol, exposing functions like `openDisplay`, `createWindow`, `mapWindow`, `attachContext`, `nextEvent` and more. The window manager should use SubstructureRedirect to intercept map requests before they are processed by the server, exactly as a real X11 window manager does.
 
-## Technologies Used
+## Window Manager
+yWM is a fully featured window manager implemented as a userspace application on top of Y11:
 
-- Svelte
-- Vue3
-- TypeScript
-- Vite
+- SubstructureRedirect and MapRequest handling
+- Window decorations and reparenting
+- Focus management
+- Move, resize, maximise and minimise
+- Active window tracking
+- Stacking order management
+
+## Applications
+All applications are compiled separately, stored on the VFS and loaded on demand:
+
+- **yDesktop** — desktop environment with icon grid, drag and drop positioning and shortcut file support
+- **yTaskbar** — taskbar with start menu, application list and system tray
+- **yTaskManager** — view and manage running processes
+- **yNotepad** — text file viewer and editor
+- **yBrowser** — in-app browser for external websites
+- **Personal and past client projects** — a collection of my previous work, including games, web applications and more
+- **Installer** — downloads and installs all built-in apps and libraries to the VFS on first boot
+
+## Technologies
+- **TypeScript**
+- **Vite**
+- **Svelte 5** - used as a main renderer for yWM decorations and all built-in applications
+- **Vue 3** - used only as a proof of concept of the framework-agnostic nature of the system, demonstrating that y11 client library is able to attach contexts of different frameworks naturally side by side without any issues
+
 
 ## Live Demo
+[https://y3v4d.com](https://y3v4d.com)
 
-A live demo of yOS can be found at: [https://y3v4d.com](https://y3v4d.com)
-
-## Image Gallery
-
+## Gallery
 ![yOS Desktop](./docs/yos-desktop.png)
 ![yOS Multiple Contexts](./docs/yos-multiple-contexts.png)
 ![yOS Task Manager](./docs/yos-task-manager.png)
