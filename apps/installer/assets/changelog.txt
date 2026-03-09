@@ -1,6 +1,47 @@
 CHANGELOG
 ------------------
 
+Version 0.4.0 - 09/03/2026
+
+- All apps and libraries are now completely separate scripts, not integrated with the core yos modules
+- All apps and libraries need to be precompiled separately into an IIFE format
+- Built-in apps and libraries follow standarised build process that either stores their code in memory for static import (development
+) or builds them into dist/apps directory and stores their URLs in the yos build so they can be downloaded at start (production) via cust
+om vite plugins
+- All apps and libraries compiled code is now dynamically loaded as raw text and saved into the VFS as actual executable and library 
+files
+- Apps and libraries are now executed by loading their code from the VFS and dynamically running it by using Function constructor, mimicking how actual operating systems run executables
+- Each app and library runner receives a global proxied kernel object, with each call to the kernel knowing the current process that executes them
+- Added simplified socket capabilities to the kernel - socket, bind, listen, accept, close, send and readv function mimick how equivalent function in linux kernel work
+- Fully rewrote X11 implementation (renamed to Y11) - now the system mimicks much more closely actual Linux version of X11, by splitting the system into two parts; y11 server and y11 client library
+- Added y11 server app that utilizes kernel sockets for interprocess communication; the server is responsible for managing the connected clients, handling their commands and managing correct state of the connections and windows
+- Added y11 client library that closely mimicks limited parts of the X11 system; it is able to open connections to the y11 server and sending commands and requests via sockets
+- Rewrote all built-in applications to use new compiled format and new y11 system
+- Apps compiling with svelte have option to fully disable inlining svelte libraries into their compiled scripts, by overwriding the default svelte imports with kernel.import("svelte"); 
+since svelte is already a library available for the yOS this greatly reduces size of the singular app
+- Added installer app that downloads all built-in libraries and apps and stores them in the VFS, as well as creating the initial system files like readmes and desktop shortcuts
+- Removed BinaryReader, BinaryWriter, EventEmitter, PathUtils and VfsUtils from kernel source and moved them to built-in utils librar
+y
+- Added IDBDriver encapsulating operations related to IndexedDB
+- Rewrote VFS to utilise IDBDriver for all file operations, natually adding disk persistance
+- Due to disk operations being asynchronous, added "include" global variable to compiled libraries and applications, allowing kernel 
+to asynchronously load compile known libraries and applications to load them synchronously from the preloaded library map, keeping the ap
+p level basic library imports synchronous
+- Changed original kernel import function name to dlopen to better match unix functions
+- Socket bind and close are now asynchronous due to the need of creating file on the disk
+- Modified all applications to properly handle all VFS operations being asynchronous
+- Y11 server now emits "y11:ready" kernel event, so other apps can properly await for the connection socket being available
+- Added shortcut file support with overridable icon and props
+- Moved all executables from desktop to /etc/applications
+- Added yBrowser as executable, applications using it should use shortcuts with custom props and icon
+- Created executable shortcuts on the desktop
+- Installer app now creates /etc/installer_done file
+- Startup script won't run installer app if /etc/installer_done file exists
+- Added Wedding Planner iframe application, one of my most recent Upwork projects
+- Added Musical Animals iframe application, an old but fun project I did for Fiverr a long time ago and recently updated
+- Updated title and icon of the generated site
+- Updated all README and ABOUT files
+
 Version 0.3.1 - 03/03/2026
 
 - Added proper desktop grid system for desktop icons with automatic positioning and collision avoidance.
