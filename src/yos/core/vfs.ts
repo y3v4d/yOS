@@ -1,5 +1,4 @@
-import { BinaryReader } from "../utils/binary-reader";
-import { TreeNode } from "../utils/tree";
+import { IDBDriver } from "./idb_driver";
 import type { Kernel } from "./kernel";
 
 enum FileType {
@@ -7,360 +6,498 @@ enum FileType {
     DIRECTORY = 1
 }
 
-interface INode {
+type INode = {
     id: number;
 
     type: FileType;
     size: number;
 
-    created_time: number;
-    modified_time: number;
+    created_at: number;
+    modified_at: number;
 }
 
-export interface DirEntry {
+type Block = Uint8Array;
+
+type DirBlock = {
+    [name: string]: number; // name to inode mapping
+}
+
+type FileDescriptor = {
+    id: number;
+    inode: number;
+    position: number;
+}
+
+type DirDescriptor = {
+    id: number;
+    inode: number;
+
+    entries: DirEntry[];
+    position: number;
+}
+
+type DirEntry = {
     inode: number;
     type: FileType;
 
     name: string;
 }
 
-export interface FileDescriptor {
-    fd: number;
-    inode: number;
-
-    position: number;
-}
-
-interface DirDescriptor {
-    fd: number;
-    inode: number;
-    tnode: TreeNode<DirEntry>;
-
-    position: number;
-}
-
-class DirectoryStructure {
-    private _root: TreeNode<DirEntry>;
-
-    constructor(rootInode: INode) {
-        this._root = new TreeNode<DirEntry>({
-            inode: rootInode.id,
-            type: rootInode.type,
-
-            name: "/"
-        });
-    }
-
-    get root() {
-        return this._root;
-    }
-}
-
 class VFS {
-    private _structure: DirectoryStructure;
+    private _driver: IDBDriver = null!;
 
-    private _inodes: Map<number, INode> = new Map();
-    private _dataBlocks: Map<number, Uint8Array> = new Map();
+    private _inodeCache: Map<number, INode> = new Map();
+    private _blockCache: Map<number, Block> = new Map();
 
-    private _nextInodeId: number = 0;
-    private _nextFd: number = 0;
+    private _nextInodeNum: number = 1;
+    private _fdCounter: number = 0;
 
-    constructor(
-        readonly kernel: Kernel
-    ) {
-        const rootInode: INode = {
-            id: this._nextInodeId++,
-            type: FileType.DIRECTORY,
+    private constructor(readonly kernel: Kernel) {}
 
-            size: 0,
+    static async create(kernel: Kernel) {
+        const vfs = new VFS(kernel);
+        vfs._driver = await IDBDriver.create("yos-vfs", 1, ["inodes", "blocks", "metadata"]);
 
-            created_time: Date.now(),
-            modified_time: Date.now()
-        };
+        let rootNode: INode = await vfs._driver.read("inodes", 0);
+        if(!rootNode) {
+            rootNode = {
+                id: 0,
 
-        this._inodes.set(rootInode.id, rootInode);
-        this._structure = new DirectoryStructure(rootInode);
-    }
+                type: FileType.DIRECTORY,
+                size: 0,
+                
+                created_at: Date.now(),
+                modified_at: Date.now()
+            };
 
-    stat(path: string): INode { // gets inode info
-        const { parent, name } = this._getParentAndName(path);
-        if(parent.value.type !== FileType.DIRECTORY) {
-            throw new Error("Parent is not a directory");
+            await vfs._driver.write("inodes", 0, rootNode);
         }
 
-        for(const child of parent.iter_children()) {
-            if(child.value.name === name) {
-                const inode = this._inodes.get(child.value.inode);
-                if(!inode) {
-                    throw new Error("Inode not found");
-                }
+        let rootBlock = await vfs._driver.read("blocks", 0);
+        if(!rootBlock) {
+            rootBlock = new Uint8Array(new TextEncoder().encode("{}"));
+            await vfs._driver.write("blocks", 0, rootBlock);
+        }
 
-                return inode;
+        let nextInodeNum = await vfs._driver.read("metadata", "nextInodeNum");
+        if(nextInodeNum === undefined) {
+            nextInodeNum = 1;
+            await vfs._driver.write("metadata", "nextInodeNum", nextInodeNum);
+        }
+
+        vfs._inodeCache.set(0, rootNode);
+        vfs._blockCache.set(0, rootBlock);
+
+        vfs._nextInodeNum = nextInodeNum;
+
+        return vfs;
+    }
+
+    async mkdir(path: string, options?: { recursive?: boolean }) {
+        const { parent, name } = await this._resolvePath(path, !!options?.recursive);
+        const newDir = await this._createFile(parent, name, FileType.DIRECTORY);
+
+        return newDir;
+    }
+
+    async rmdir(path: string) {
+        const { parent, name } = await this._resolvePath(path);
+        if(parent.type !== FileType.DIRECTORY) {
+            throw new Error("Parent node is not a directory");
+        }
+
+        const parentBlock = await this._readBlock(parent.id);
+        const parentDir = this._decodeDirBlock(parentBlock);
+        const inodeNum = parentDir[name];
+        if(inodeNum === undefined) {
+            throw new Error("File or directory does not exist");
+        }
+
+        const inode = await this._readINode(inodeNum);
+        if(inode.type === FileType.DIRECTORY) {
+            const dirBlock = await this._readBlock(inode.id);
+            const dir = this._decodeDirBlock(dirBlock);
+            if(Object.keys(dir).length > 0) {
+                throw new Error("Directory is not empty");
+            }
+        } else {
+            throw new Error("Specified path is not a directory");
+        }
+
+        delete parentDir[name];
+
+        const newParentBlock = this._encodeDirBlock(parentDir);
+        if(this._blockCache.has(parent.id)) {
+            this._blockCache.set(parent.id, newParentBlock);
+        }
+
+        parent.modified_at = Date.now();
+        parent.size = newParentBlock.length;
+
+        await Promise.all([
+            this._driver.write("blocks", parent.id, newParentBlock),
+            this._driver.write("inodes", parent.id, parent),
+
+            this._driver.delete("inodes", inodeNum),
+            this._driver.delete("blocks", inodeNum),
+        ]);
+
+        this._inodeCache.delete(inodeNum);
+        this._blockCache.delete(inodeNum);
+    }
+
+    async unlink(path: string) {
+        const { parent, name } = await this._resolvePath(path);
+        const parentBlock = await this._readBlock(parent.id);
+        const parentDir = this._decodeDirBlock(parentBlock);
+        const inodeNum = parentDir[name];
+        if(inodeNum === undefined) {
+            throw new Error("File does not exist");
+        }
+
+        const inode = await this._readINode(inodeNum);
+        if(inode.type === FileType.DIRECTORY) {
+            throw new Error("Specified path is a directory");
+        }
+
+        delete parentDir[name];
+
+        const newParentBlock = this._encodeDirBlock(parentDir);
+        if(this._blockCache.has(parent.id)) {
+            this._blockCache.set(parent.id, newParentBlock);
+        }
+
+        parent.modified_at = Date.now();
+        parent.size = newParentBlock.length;
+
+        await Promise.all([
+            this._driver.write("blocks", parent.id, newParentBlock),
+            this._driver.write("inodes", parent.id, parent),
+
+            this._driver.delete("inodes", inodeNum),
+            this._driver.delete("blocks", inodeNum),
+        ]);
+
+        this._inodeCache.delete(inodeNum);
+        this._blockCache.delete(inodeNum);
+    }
+
+    async opendir(path: string) {
+        let inodeNum: number;
+
+        if(path === "/") {
+            inodeNum = 0;
+        } else {
+            const { parent, name } = await this._resolvePath(path);
+            const parentDir = this._decodeDirBlock(await this._readBlock(parent.id));
+
+            inodeNum = parentDir[name];
+            if(inodeNum === undefined) {
+                throw new Error(`Directory ${name} does not exist`);
             }
         }
 
-        throw new Error(`File or directory does not exist: ${path}`);
-    }
-
-    open(path: string) { // opens files
-        const { parent, name } = this._getParentAndName(path);
-        if(parent.value.type !== FileType.DIRECTORY) {
-            throw new Error("Parent is not a directory");
+        const inode = await this._readINode(inodeNum);
+        if(inode.type !== FileType.DIRECTORY) {
+            throw new Error("Specified path is not a directory");
         }
 
-        let node: TreeNode<DirEntry> | null = null;
-        for(const child of parent.iter_children()) {
-            if(child.value.name === name) {
-                const inode = this._inodes.get(child.value.inode);
-                if(!inode || inode.type !== FileType.FILE) {
-                    throw new Error("Path is not a file");
-                }
+        const dirBlock = await this._readBlock(inode.id);
+        const dir = this._decodeDirBlock(dirBlock);
 
-                node = child;
-                break;
-            }
-        }
-
-        if(!node) {
-            node = this.__createfile(parent, name, FileType.FILE);
-            this.kernel.emit({ type: "file:created", path });
+        const entries: DirEntry[] = [];
+        for(const [entryName, entryInodeNum] of Object.entries(dir)) {
+            const entryInode = await this._readINode(entryInodeNum);
+            entries.push({
+                inode: entryInodeNum,
+                type: entryInode.type,
+                name: entryName
+            });
         }
 
         return {
-            fd: this._nextFd++,
-            inode: node.value.inode,
-
+            id: this._fdCounter++,
+            inode: inode.id,
+            entries,
             position: 0
-        } satisfies FileDescriptor;
+        } as DirDescriptor;
     }
 
-    write(fd: FileDescriptor, data: Uint8Array) { // writes to files, always replace existing data
-        const inode = this._inodes.get(fd.inode);
-        if(!inode || inode.type !== FileType.FILE) {
-            throw new Error("Invalid file inode");
+    readdir(dir: DirDescriptor) {
+        if(dir.position >= dir.entries.length) {
+            return null;
         }
 
-        this._dataBlocks.set(inode.id, data);
+        const entry = dir.entries[dir.position];
+        dir.position++;
 
-        inode.size = data.length;
-        inode.modified_time = Date.now();
-
-        fd.position = data.length;
-        return data.length;        
+        return entry;
     }
 
-    read(fd: FileDescriptor, length: number): Uint8Array { // reads from files
-        const inode = this._inodes.get(fd.inode);
-        if(!inode || inode.type !== FileType.FILE) {
-            throw new Error("Invalid file inode");
+    async open(path: string) {
+        console.log(`Opening file at path: ${path}`);
+
+        const { parent, name } = await this._resolvePath(path);
+        const parentDir = this._decodeDirBlock(await this._readBlock(parent.id));
+        let node: INode;
+
+        if(parentDir[name] === undefined) {
+            node = await this._createFile(parent, name, FileType.FILE);
+        } else {
+            node = await this._readINode(parentDir[name]);
+            if(node.type !== FileType.FILE) {
+                throw new Error(`${name} is not a file`);
+            }
         }
 
-        const data = this._dataBlocks.get(inode.id) || new Uint8Array(0);
-        const readData = data.slice(fd.position, fd.position + length);
-
-        fd.position += readData.length;
-        return readData;
+        return {
+            id: this._fdCounter++,
+            inode: node.id,
+            position: 0
+        } as FileDescriptor;
     }
 
-    lseek(fd: FileDescriptor, position: number) { // seeks to position in file
-        const inode = this._inodes.get(fd.inode);
+    async write(fd: FileDescriptor, data: Uint8Array) {
+        const inode = await this._readINode(fd.inode);
+        if(inode.type !== FileType.FILE) {
+            throw new Error("Cannot write to a directory");
+        }
+
+        let block = await this._readBlock(inode.id);
+
+        const isOverflow = fd.position + data.length > block.length;
+        if(isOverflow) {
+            const newBlock = new Uint8Array(fd.position + data.length);
+            newBlock.set(block.slice(0, fd.position), 0);
+            newBlock.set(data, fd.position);
+
+            block = newBlock;
+            if(this._blockCache.has(inode.id)) {
+                this._blockCache.set(inode.id, block);
+            }
+        } else {
+            block.set(data, fd.position);
+        }
+
+        inode.size = Math.max(inode.size, fd.position + data.length);
+        inode.modified_at = Date.now();
+
+        await Promise.all([
+            this._driver.write("blocks", inode.id, block),
+            this._driver.write("inodes", inode.id, inode)
+        ]);
+
+        fd.position += data.length;
+
+        return data.length;
+    }
+
+    async read(fd: FileDescriptor, length: number): Promise<Uint8Array> {
+        const inode = await this._readINode(fd.inode);
+        if(inode.type !== FileType.FILE) {
+            throw new Error("Cannot read from a directory");
+        }
+
+        const block = await this._readBlock(inode.id);
+        const data = block.slice(fd.position, fd.position + length);
+        fd.position += data.length;
+
+        return data;
+    }
+
+    async lseek(fd: FileDescriptor, position: number) {
+        const inode = await this._readINode(fd.inode);
         if(!inode || inode.type !== FileType.FILE) {
-            throw new Error("Invalid file inode");
+            throw new Error("Invalid file descriptor");
         }
 
         if(position < 0 || position > inode.size) {
-            throw new Error("Invalid seek position");
+            throw new Error("Invalid position");
         }
 
         fd.position = position;
     }
 
-    fseek(fd: FileDescriptor, offset: number, whence: "SET" | "CUR" | "END") {
-        const inode = this._inodes.get(fd.inode);
+    async fseek(fd: FileDescriptor, offset: number, whence: "SET" | "CUR" | "END") {
+        const inode = await this._readINode(fd.inode);
         if(!inode || inode.type !== FileType.FILE) {
-            throw new Error("Invalid file inode");
+            throw new Error("Invalid file descriptor");
         }
 
-        let newPosition = fd.position;
-        if(whence === "SET") {
-            newPosition = offset;
-        } else if(whence === "CUR") {
-            newPosition += offset;
-        } else if(whence === "END") {
-            newPosition = inode.size + offset;
+        let newPosition: number;
+        switch(whence) {
+            case "SET":
+                newPosition = offset;
+                break;
+            case "CUR":
+                newPosition = fd.position + offset;
+                break;
+            case "END":
+                newPosition = inode.size + offset;
+                break;
+            default:
+                throw new Error("Invalid whence");
         }
 
         if(newPosition < 0 || newPosition > inode.size) {
-            throw new Error("Invalid seek position");
+            throw new Error("Invalid position");
         }
 
         fd.position = newPosition;
     }
-    
 
-    mkdir(path: string, recursive: boolean = true) { // creates directories
-        const parts = path.split("/").filter(p => p.length > 0);
-        const filename = parts.pop() || "";
+    async stat(path: string) {
+        const { parent, name } = await this._resolvePath(path);
+        const parentDir = this._decodeDirBlock(await this._readBlock(parent.id));
+        const inodeNum = parentDir[name];
+        if(inodeNum === undefined) {
+            throw new Error("File or directory does not exist");
+        }
 
-        let currentNode = this._structure.root;
+        const inode = await this._readINode(inodeNum);
+        return inode;
+    }
+
+    async printStructure() {
+        // print VFS structure for debugging
+        const printDir = async (path: string, indent: string = "") => {
+            const dir = await this.opendir(path);
+            let entry;
+            while(entry = this.readdir(dir)) {
+            const node = await this.stat(path + "/" + entry.name);
+            console.log(`${indent}${entry.name} (${node.type === FileType.DIRECTORY ? "DIR" : "FILE"}) size=${(node.size / 1024).toFixed(2)}KB`);
+            if(node.type === FileType.DIRECTORY) {
+                await printDir(path + "/" + entry.name, indent + "  ");
+            }
+            }
+        };
+
+        console.log("VFS Structure:");
+        await printDir("/");
+    }
+
+    private async _resolvePath(path: string, recursive?: boolean): Promise<{ parent: INode, name: string }> {
+        const parts = path.split("/").filter(part => part.length > 0);
+        const filename = parts.pop();
+
+        if(!filename) {
+            throw new Error("Invalid path");
+        }
+
+        let currentNode: INode = await this._readINode(0);
         for(const part of parts) {
-            let found = false;
-
-            for(const child of currentNode.iter_children()) {
-                if(child.value.name !== part) {
-                    continue;
-                }
-
-                const inode = this._inodes.get(child.value.inode);
-                if(!inode || inode.type !== FileType.DIRECTORY) {
-                    throw new Error(`Path component '${part}' is not a directory`);
-                }
-
-                currentNode = child;
-                found = true;
-
-                break;
-            }
-
-            if(!found) {
+            const currentDir = this._decodeDirBlock(await this._readBlock(currentNode.id));
+            const inodeNum = currentDir[part];
+            if(inodeNum === undefined) {
                 if(!recursive) {
-                    throw new Error(`Directory '${part}' does not exist`);
+                    throw new Error(`Directory ${part} does not exist. Fullpath: ${path}`);
                 }
 
-                currentNode = this.__createfile(currentNode, part, FileType.DIRECTORY);
+                const newDir = await this._createFile(currentNode, part, FileType.DIRECTORY);
+                currentNode = newDir;
+                
+                continue;
             }
-        }
 
-        this.__createfile(currentNode, filename, FileType.DIRECTORY);
-    }
-
-    opendir(path: string): DirDescriptor { // opens directories
-        const { parent, name } = this._getParentAndName(path);
-        if(parent.value.type !== FileType.DIRECTORY) {
-            throw new Error("Parent is not a directory");
-        }
-
-        let node: TreeNode<DirEntry> | null = null;
-        for(const child of parent.iter_children()) {
-            if(child.value.name === name) {
-                const inode = this._inodes.get(child.value.inode);
-                if(!inode || inode.type !== FileType.DIRECTORY) {
-                    throw new Error("Path is not a directory");
-                }
-
-                node = child;
-                break;
+            const inode = await this._readINode(inodeNum);
+            if(inode.type !== FileType.DIRECTORY) {
+                throw new Error(`${part} is not a directory`);
             }
+
+            currentNode = inode;
         }
 
-        if(!node) {
-            throw new Error("Directory does not exist");
-        }
-
-        const dirDescriptor: DirDescriptor = {
-            fd: this._nextFd++,
-            inode: node.value.inode,
-            tnode: node,
-
-            position: 0
-        };
-
-        return dirDescriptor;
+        return { parent: currentNode, name: filename };
     }
 
-    readdir(dir: DirDescriptor): DirEntry | null {
-        const dirInode = this._inodes.get(dir.inode);
-        if(!dirInode || dirInode.type !== FileType.DIRECTORY) {
-            throw new Error("Invalid directory inode");
+    private async _createFile(parent: INode, name: string, type: FileType): Promise<INode> {
+        if(parent.type !== FileType.DIRECTORY) {
+            throw new Error("Parent node is not a directory");
         }
 
-        const dirNode = dir.tnode;
-        const children = Array.from(dirNode.iter_children());
-
-        const child = children[dir.position];
-        if(!child) {
-            return null;
+        let parentBlock = await this._readBlock(parent.id);
+        const parentDir = this._decodeDirBlock(parentBlock);
+        if(parentDir[name] !== undefined) {
+            throw new Error(`File or directory ${name} already exists`);
         }
 
-        dir.position++;
-        return child.value;
-    }
-
-    printStructure(): void {
-        const printNode = (node: TreeNode<DirEntry>, indent: string) => {
-            console.log(`${indent}- ${node.value.name} (inode: ${node.value.inode}, type: ${FileType[node.value.type]}, size: ${this._inodes.get(node.value.inode)?.size || 0})`);
-            for(const child of node.iter_children()) {
-                printNode(child, indent + "  ");
-            }
-        };
-
-        printNode(this._structure.root, "");
-    }
-
-    printBlocks(): void {
-        for(const [id, data] of this._dataBlocks) {
-            const binaryReader = new BinaryReader(data);
-            const length = binaryReader.uint32();
-            const text = binaryReader.string(length);
-
-            console.log(`Block iNode #${id} - ${text}`);
-        }
-    }
-
-    private __createfile(parent: TreeNode<DirEntry>, name: string, type: FileType): TreeNode<DirEntry> {
+        const iNodeId = this._nextInodeNum++;
         const newInode: INode = {
-            id: this._nextInodeId++,
-            type: type,
+            id: iNodeId,
 
+            type: type,
             size: 0,
 
-            created_time: Date.now(),
-            modified_time: Date.now()
+            created_at: Date.now(),
+            modified_at: Date.now()
         };
 
-        this._inodes.set(newInode.id, newInode);
-        const newNode = new TreeNode<DirEntry>({
-            inode: newInode.id,
-            type: newInode.type,
+        parentDir[name] = iNodeId;
+        parentBlock = this._encodeDirBlock(parentDir);
 
-            name: name
-        });
-        parent.addChild(newNode);
-
-        return newNode;
-    }
-
-    private _getParentAndName(path: string): { parent: TreeNode<DirEntry>; name: string; } {
-        const parts = path.split("/").filter(p => p.length > 0);
-        const name = parts.pop() || "";
-        let currentNode = this._structure.root;
-
-        for(const part of parts) {
-            let found = false;
-
-            for(const child of currentNode.iter_children()) {
-                if(child.value.name !== part) {
-                    continue;
-                }
-                
-                const inode = this._inodes.get(child.value.inode);
-                if(!inode || inode.type !== FileType.DIRECTORY) {
-                    throw new Error(`Path component '${part}' is not a directory`);
-                }
-
-                currentNode = child;
-                found = true;
-
-                break;
-            }
-
-            if(!found) {
-                throw new Error(`Directory '${part}' does not exist`);
-            }
+        if(this._blockCache.has(parent.id)) {
+            this._blockCache.set(parent.id, parentBlock);
         }
 
-        return { parent: currentNode, name };
+        parent.modified_at = Date.now();
+        parent.size = parentBlock.length;
+
+        await Promise.all([
+            this._driver.write("inodes", iNodeId, newInode),
+            type === FileType.DIRECTORY 
+                ? this._driver.write("blocks", iNodeId, this._encodeDirBlock({})) 
+                : this._driver.write("blocks", iNodeId, new Uint8Array()),
+
+            this._driver.write("inodes", parent.id, parent),
+            this._driver.write("blocks", parent.id, parentBlock),
+
+            this._driver.write("metadata", "nextInodeNum", this._nextInodeNum),
+        ]);
+
+        return newInode;
+    }
+
+    private async _readINode(inodeNum: number, cache = true): Promise<INode> {
+        if(this._inodeCache.has(inodeNum)) {
+            return this._inodeCache.get(inodeNum)!;
+        }
+
+        const inode = await this._driver.read("inodes", inodeNum);
+        if(!inode) {
+            throw new Error(`INode ${inodeNum} does not exist`);
+        }
+
+        if(cache) {
+            this._inodeCache.set(inodeNum, inode);
+        }
+
+        return inode;
+    }
+
+    private async _readBlock(inodeNum: number, cache = true): Promise<Block> {
+        if(this._blockCache.has(inodeNum)) {
+            return this._blockCache.get(inodeNum)!;
+        }
+
+        const block = await this._driver.read("blocks", inodeNum);
+        if(!block) {
+            throw new Error(`Block ${inodeNum} does not exist`);
+        }
+
+        if(cache) {
+            this._blockCache.set(inodeNum, block);
+        }
+
+        return block as Block;
+    }
+
+    private _decodeDirBlock(block: Block): DirBlock {
+        return JSON.parse(new TextDecoder().decode(block)) as DirBlock;
+    }
+
+    private _encodeDirBlock(dir: DirBlock): Block {
+        return new TextEncoder().encode(JSON.stringify(dir));
     }
 }
 
-export { VFS };
+export { VFS, FileType };

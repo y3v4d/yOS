@@ -72,6 +72,21 @@ p {
   display: none;
 }
 
+.content-decorated {
+  width: 100%;
+  height: 100%;
+
+  background-color: #C0C0C0;
+  box-shadow:
+      -1px -1px #ffffff inset,
+      1px 1px #808080 inset,
+      -2px -2px #d4d0c8 inset,
+      2px 2px #404040 inset;
+
+  box-sizing: border-box;
+  padding: 2px;
+}
+
 .panel-raised {
   background-color: #C0C0C0;
   box-shadow:

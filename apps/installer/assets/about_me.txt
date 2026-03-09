@@ -1,0 +1,13 @@
+ABOUT ME
+-------------
+
+Hello! 
+I'm Bartlomiej Wethacz (y3v4d), a passionate software developer with a love for creating low-level applications and exploring new technologies.
+
+I work in software development, in the most general sense. I have experience in a wide range of programming languages and frameworks.
+I made games in C++/OpenGL, Cocos Creator, Unity, web applications in React, SolidJS, Svelte and Vue, mobile apps in Flutter,
+servers in Node.js, and all kind of random projects in free time, just like this one.
+
+I enjoy working on projects that challenge me and allow me to learn and grow as a developer.
+
+Feel free to reach out if you'd like to work with me or learn more about my work!

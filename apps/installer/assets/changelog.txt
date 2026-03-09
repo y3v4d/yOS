@@ -1,0 +1,143 @@
+CHANGELOG
+------------------
+
+Version 0.4.0 - 09/03/2026
+
+- All apps and libraries are now completely separate scripts, not integrated with the core yos modules
+- All apps and libraries need to be precompiled separately into an IIFE format
+- Built-in apps and libraries follow standarised build process that either stores their code in memory for static import (development
+) or builds them into dist/apps directory and stores their URLs in the yos build so they can be downloaded at start (production) via cust
+om vite plugins
+- All apps and libraries compiled code is now dynamically loaded as raw text and saved into the VFS as actual executable and library 
+files
+- Apps and libraries are now executed by loading their code from the VFS and dynamically running it by using Function constructor, mimicking how actual operating systems run executables
+- Each app and library runner receives a global proxied kernel object, with each call to the kernel knowing the current process that executes them
+- Added simplified socket capabilities to the kernel - socket, bind, listen, accept, close, send and readv function mimick how equivalent function in linux kernel work
+- Fully rewrote X11 implementation (renamed to Y11) - now the system mimicks much more closely actual Linux version of X11, by splitting the system into two parts; y11 server and y11 client library
+- Added y11 server app that utilizes kernel sockets for interprocess communication; the server is responsible for managing the connected clients, handling their commands and managing correct state of the connections and windows
+- Added y11 client library that closely mimicks limited parts of the X11 system; it is able to open connections to the y11 server and sending commands and requests via sockets
+- Rewrote all built-in applications to use new compiled format and new y11 system
+- Apps compiling with svelte have option to fully disable inlining svelte libraries into their compiled scripts, by overwriding the default svelte imports with kernel.import("svelte"); 
+since svelte is already a library available for the yOS this greatly reduces size of the singular app
+- Added installer app that downloads all built-in libraries and apps and stores them in the VFS, as well as creating the initial system files like readmes and desktop shortcuts
+- Removed BinaryReader, BinaryWriter, EventEmitter, PathUtils and VfsUtils from kernel source and moved them to built-in utils librar
+y
+- Added IDBDriver encapsulating operations related to IndexedDB
+- Rewrote VFS to utilise IDBDriver for all file operations, natually adding disk persistance
+- Due to disk operations being asynchronous, added "include" global variable to compiled libraries and applications, allowing kernel 
+to asynchronously load compile known libraries and applications to load them synchronously from the preloaded library map, keeping the ap
+p level basic library imports synchronous
+- Changed original kernel import function name to dlopen to better match unix functions
+- Socket bind and close are now asynchronous due to the need of creating file on the disk
+- Modified all applications to properly handle all VFS operations being asynchronous
+- Y11 server now emits "y11:ready" kernel event, so other apps can properly await for the connection socket being available
+- Added shortcut file support with overridable icon and props
+- Moved all executables from desktop to /etc/applications
+- Added yBrowser as executable, applications using it should use shortcuts with custom props and icon
+- Created executable shortcuts on the desktop
+- Installer app now creates /etc/installer_done file
+- Startup script won't run installer app if /etc/installer_done file exists
+- Added Wedding Planner iframe application, one of my most recent Upwork projects
+- Added Musical Animals iframe application, an old but fun project I did for Fiverr a long time ago and recently updated
+- Updated title and icon of the generated site
+- Updated all README and ABOUT files
+
+Version 0.3.1 - 03/03/2026
+
+- Added proper desktop grid system for desktop icons with automatic positioning and collision avoidance.
+- Added ability to move desktop icons by dragging them around.
+- Added blue overlay over selected desktop icon.
+- X11 attachContext function now doesn't create context (again), instead context is created after first mapping of the window.
+  This prevents any potential issues with immediate Svelte lifecycle callbacks and effects firing before the DOM is rendered,
+  which causes hard to track errors when it comes to DOM size and position measurements.
+- Task Manager applications are now always filtered to only include NORMAL type windows.
+- Taskbar tabs are now always filtered to only include NORMAL type windows.
+- Added End Task/Process functionality to Task Manager application.
+- X11 closeDisplay function now properly removes the connection from any window subscriber lists.
+- Dragged windows are now automatically unmaximized.
+- Added /dist to .gitignore to avoid committing build artifacts.
+
+Version 0.3.0 - 02/03/2026
+
+- Rewritten the entire project to use a core-kernel architecture with core modules, applications and libraries running on top of it.
+- Project no longer uses SvelteKit as the base for the OS internals, instead using plain Vite + TypeScript setup.
+- Project is now framework-agnostic, with Svelte 5 used only for rendering applications and UI components.
+- Moved project to use Vite + Svelte build system instead of SvelteKit.
+- Added process management system to the kernel for spawning and managing applications and processes.
+- Added virtual file system (VFS) with basic file and directory operations.
+- Added audio core for managing audio playback and sound effects.
+- Added registry for storing and retrieving global entries like executables and applications.
+- Added X11-inspired display server.
+- Added yWM window manager built on top of the X11-inspired display server with draggable and resizable windows.
+- Added yDesktop application to serve as the main desktop environment with wallpaper and desktop icons.
+- Added yTaskbar application to serve as the taskbar with start menu, application list and system tray.
+- All applications rewritten to run on top of the new core architecture, but still utilize Svelte 5 for rendering.
+- Added yTaskManager application to view and manage running applications and processes.
+- Added yNotepad application to view and edit text files from the virtual file system.
+- Added Svelte and Vue context demos as applications to showcase the context integration system.
+- Updated desktop icons to launch applications via the new kernel process spawning system.
+- Added disk stored executable file format.
+- Added audio feedback for desktop icon interactions.
+- Redone README file.
+- Added ABOUT_THIS file.
+
+Version 0.2.0 - 21/01/2026
+
+- Added og MS Sans Serif font
+- Added Process that consists of component constructor and parameters
+- Added OSContextProvider used to provide processes and their spawn/kill globally
+- Changed hardcoded applications logic in Desktop to more maintainable generic processes
+- Changed mouse and touch events in Window to generic pointer events
+- Added reusable Button component
+- Extended TextReader to split the raw text into tokens for better link formatting
+- Updated window resizing so windows resize perfectly into available space
+- Visual overhaul to match retro windows style more accuretly with perfect borders
+- Updated LINKS with my Upwork profile link
+- Added CREDITS with legal info and acknowledgments
+- Updated Svelte to ^5.40
+
+Version 0.1.3 - 28/11/2025
+
+- Added touch support for dragging windows.
+- Size of the Window is now bindable.
+- Added maximize/minimize functionality to Window component.
+- Added better mobile support for Windows - client width less than 600px now forces windows into maximized state.
+- Changed font to monoscape for better retro aesthetic.
+- PixelCanvas framebuffer is now recreated when its width or height changes.
+- Added custom scrollbar component for TextReader application.
+- Added external Voxelly application as a new desktop icon.
+- Added start bar to the Desktop with start button and system tray with clock.
+- Converted Desktop to not be a Window itself.
+- Updated close button icon.
+- Updated .txt extension icon.
+- Added new site favicon.
+- Removed overscroll behavior.
+
+Version 0.1.2 - 19/11/2025
+
+- Added Browser application that opens an in-app iframe to browse external websites.
+- Added Match Mayhem (my Fiverr client project) browser-type application as a new desktop icon.
+- Smoothed out Snow Simulator vortex animation, added ambient music and vortex sound effect.
+- Desktop icons are now positioned in a cell layout.
+- Removed links from ABOUT ME document.
+
+Version 0.1.1 - 18/11/2025
+
+- Added Snow Simulator application as a new desktop icon.
+- Added Snow Simulator application that simulates falling snow with suction vortex effect.
+- Removed /snow path as the snow simulation is now integrated into the desktop.
+- Added PixelCanvas component used in Snow Simulator for pixel-based rendering.
+- Removed drop-shadow from DesktopIcon component (shadow baked into icon images instead).
+- Added mouse and keyboard callbacks to Window component.
+- Improved Window focus management.
+- Updated LINKS.txt with correct github repository link.
+- Updated repo README with Snow Simulator screenshot.
+
+Version 0.1.0 - 18/11/2025
+
+Initial release of yOS.
+- Added basic window management system with draggable windows.
+- Implemented desktop icons with click functionality.
+- Added audio feedback for desktop icon interactions.
+- Created README, ABOUT ME, LINKS and CHANGELOG files for documentation.
+- Old snow simulation WIP playground moved under /snow path.
