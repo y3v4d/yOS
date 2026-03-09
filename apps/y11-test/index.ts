@@ -11,7 +11,7 @@ enum XEventMask {
 export default async function(args: any[]) {
     console.log("Hello from y11-test app!", args);
 
-    const y11 = kernel.import<Y11>("y11");
+    const y11 = load<Y11>("y11");
     if(!y11) {
         throw new Error("Y11 library not found");
     }

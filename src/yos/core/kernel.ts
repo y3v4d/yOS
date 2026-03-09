@@ -54,8 +54,8 @@ export interface Socket {
 }
 
 class Kernel {
-    private _vfs: VFS;
-    private _audio: AudioCore;
+    private _vfs: VFS = null!;
+    private _audio: AudioCore = null!;
     private _registry: Registry = new Registry();
     
     private _processes: Map<number, Process> = new Map();
@@ -70,13 +70,18 @@ class Kernel {
 
     private _currentProcess: Process | null = null;
 
-    constructor() {
-        this._vfs = new VFS(this);
-        this._audio = new AudioCore(this);
-        this._registry = new Registry();
+    private constructor() {}
+
+    static async create() {
+        const kernel = new Kernel();
+
+        kernel._vfs = await VFS.create(kernel);
+        kernel._audio = new AudioCore(kernel);
+        kernel._registry = new Registry();
 
         // @ts-ignore
-        window.yos = this;
+        window.yos = kernel;
+        return kernel;
     }
 
     subscribe() {
@@ -96,33 +101,35 @@ class Kernel {
         }
     }
 
-    import(name: string) {
-        if(!this._currentProcess) {
-            throw new Error("Kernel: import() called outside of a process context.");
+    async waitFor(type: string) {
+        const subscriber = this.subscribe();
+        while(true) {
+            const event = subscriber.next();
+            if(event && event.type === type) {
+                this.unsubscribe(subscriber);
+                return event;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
+
+    async dlopen(name: string) {
+        const currentProcess = this._currentProcess;
+        if(!currentProcess) {
+            throw new Error("Kernel: dlopen() called outside of a process context.");
         }
 
-        if(!this._processImports.has(this._currentProcess.pid)) {
-            this._processImports.set(this._currentProcess.pid, new Map());
+        if(!this._processImports.has(currentProcess.pid)) {
+            this._processImports.set(currentProcess.pid, new Map());
         }
 
-        const imports = this._processImports.get(this._currentProcess.pid)!;
+        const imports = this._processImports.get(currentProcess.pid)!;
         if(imports.has(name)) {
             return imports.get(name);
         }
 
-        const fd = this.vfs.open(`/libs/${name}.lib`);
-        this.vfs.fseek(fd, 0, "END");
-        const fileSize = fd.position;
-        this.vfs.fseek(fd, 0, "SET");
-
-        const data = this.vfs.read(fd, fileSize);
-        const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-
-        const contentLength = view.getUint32(0, true);
-        const content = new TextDecoder().decode(data.subarray(4, 4 + contentLength));
-
-        console.log(`Kernel: Importing library "${name}" for process ${this._currentProcess.pid}...`);
-        const lib = new Function("kernel", `${content} return main;`)(this);
+        const lib = (await this._loadLib(name))(this);
         imports.set(name, lib);
 
         return lib;
@@ -159,21 +166,21 @@ class Kernel {
         return socket;
     }
 
-    bind(socket: Socket, address: string) {
+    async bind(socket: Socket, address: string) {
         if(socket.state !== "UNBOUND") {
             throw new Error(`Socket ${socket.id} is not in UNBOUND state.`);
         }
 
         const socketPath = "/tmp/sockets/" + address;
-
-        this.vfs.mkdir("/tmp/sockets", true);
-        const fd = this.vfs.open(socketPath);
+        
+        console.log(`Binding socket ${socket.id} to address ${address} at path ${socketPath}`);
+        const fd = await this.vfs.open(socketPath);
 
         const data = new Uint8Array(4);
         const view = new DataView(data.buffer);
         view.setUint32(0, socket.id, true);
 
-        this.vfs.write(fd, data);
+        await this.vfs.write(fd, data);
 
         socket.path = address;
         socket.state = "BOUND";
@@ -232,15 +239,15 @@ class Kernel {
         });
     }
 
-    connect(socket: Socket, address: string) {
+    async connect(socket: Socket, address: string) {
         if(socket.state !== "UNBOUND") {
             throw new Error(`Socket ${socket.id} is not in UNBOUND state.`);
         }
 
         const socketPath = "/tmp/sockets/" + address;
-        const fd = this.vfs.open(socketPath);
+        const fd = await this.vfs.open(socketPath);
 
-        const data = this.vfs.read(fd, 4);
+        const data = await this.vfs.read(fd, 4);
         const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
         const socketId = view.getUint32(0, true);
 
@@ -280,14 +287,16 @@ class Kernel {
         }
     }
 
-    close(socket: Socket) {
+    async close(socket: Socket) {
         if(socket.state === "CLOSED") {
             throw new Error(`Socket ${socket.id} is already closed.`);
         }
 
+        console.log(`Closing socket ${socket.id} with state ${socket.state}.`);
+
         if(socket.state === "LISTENING" || socket.state === "BOUND") {
             const socketPath = "/tmp/sockets/" + socket.path!;
-            this.vfs.rm(socketPath);
+            await this.vfs.unlink(socketPath);
         }
 
         if(socket.state === "CONNECTED") {
@@ -315,28 +324,26 @@ class Kernel {
         }
     }
 
-    execve(path: string, ...args: any[]) {
-        const fd = this.vfs.open(path);
+    async execve(path: string, ...args: any[]) {
+        const fd = await this.vfs.open(path);
 
-        this.vfs.fseek(fd, 0, "END");
+        await this.vfs.fseek(fd, 0, "END");
         const fileSize = fd.position;
-        this.vfs.fseek(fd, 0, "SET");
+        await this.vfs.fseek(fd, 0, "SET");
 
-        const data = this.vfs.read(fd, fileSize);
+        const data = await this.vfs.read(fd, fileSize);
         const view = new DataView(data.buffer);
 
         const codeLength = view.getUint32(0, true);
         const code = new TextDecoder().decode(data.subarray(4, 4 + codeLength));
 
-        const process = this.exec(code, ...args);
+        const process = await this.exec(code, ...args);
         process.path = path;
-
-        console.log(`Kernel: Assigned process ${process.pid} to path "${path}".`);
 
         return process;
     }
 
-    exec(code: string, ...args: any[]) {
+    async exec(code: string, ...args: any[]) {
         const pid = this._nextPid++;
         const process: Process = {
             pid,
@@ -363,10 +370,32 @@ class Kernel {
             }
         });
 
-        const fn = new Function("kernel", `
+        const libMap = new Map<string, any>();
+
+        // search for needed imports that have format include("libname")
+        const importRegex = /include\("([^"]+)"\)/g;
+        let match: RegExpExecArray | null;
+        while((match = importRegex.exec(code)) !== null) {
+            const [fullMatch, libName] = match;
+            if(libMap.has(libName)) {
+                continue;
+            }
+            
+            console.log(`Kernel: Found import "${libName}" in process ${pid}. Attempting to load...`);
+
+            const lib = (await this._loadLib(libName))(proxyKernel);
+            libMap.set(libName, lib);
+        }
+
+        const fn = new Function("kernel", "include", `
             ${code} 
             return main;
-        `)(proxyKernel);
+        `)(proxyKernel, (libName: string) => {
+            if(!libMap.has(libName)) {
+                throw new Error(`Kernel: Process ${pid} attempted to load unknown library "${libName}".`);
+            }
+            return libMap.get(libName);
+        });
 
         this._processes.set(pid, process);
         this._emit({ type: "process:spawned", pid });
@@ -374,6 +403,7 @@ class Kernel {
         console.log(`Kernel: Launching process ${pid}.`);
         fn(args).catch((error: any) => console.error(error)).finally(() => {
             const processSockets = this._processSockets.get(pid);
+            console.log(`Kernel: Process ${pid} is exiting. Closing ${processSockets ? processSockets.size : 0} associated sockets.`);
             if(processSockets) {
                 for(const socket of processSockets) {
                     this.close(socket);
@@ -398,7 +428,7 @@ class Kernel {
         const process = this._processes.get(pid);
         if (process) {
             process.should_kill = true;
-            console.log(`Kernel: Marked process ${pid} for termination.`);
+            console.log(`Kernel: Marked process ${pid} for termination. Active sockets: ${this._processSockets.get(pid)?.size ?? 0}`);
         } else {
             console.warn(`Kernel: Attempted to kill non-existent process with PID ${pid}.`);
         }
@@ -444,6 +474,22 @@ class Kernel {
 
     get vfs() {
         return this._vfs;
+    }
+
+    private async _loadLib(libName: string) {
+        const fd = await this.vfs.open(`/libs/${libName}.lib`);
+        await this.vfs.fseek(fd, 0, "END");
+        const fileSize = fd.position;
+        await this.vfs.fseek(fd, 0, "SET");
+
+        const data = await this.vfs.read(fd, fileSize);
+        const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+
+        const contentLength = view.getUint32(0, true);
+        const code = new TextDecoder().decode(data.subarray(4, 4 + contentLength));
+
+        const lib = new Function("kernel", `${code} return main;`);
+        return lib;
     }
 
     private _emit(event: KernelEvent) {

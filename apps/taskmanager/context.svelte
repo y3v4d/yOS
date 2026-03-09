@@ -30,7 +30,7 @@
     }: TaskManagerParams = $props();
 
     // @ts-ignore
-    const utils = kernel.import("utils");
+    const utils = include("utils");
 
     let applications = $state<ApplicationInfo[]>([]);
     let processes = $state<any[]>([]);

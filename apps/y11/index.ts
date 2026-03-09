@@ -137,8 +137,10 @@ export default async function(args: any[]) {
 
     let socket = kernel.socket();
 
-    kernel.bind(socket, `y11.sock`);
-    kernel.listen(socket);
+    await kernel.bind(socket, `y11.sock`);
+    await kernel.listen(socket);
+
+    kernel.emit({ type: "y11:ready" });
 
     let should_close = false;
     while(!should_close) {
@@ -147,9 +149,9 @@ export default async function(args: any[]) {
     }
 }
 
-function sendMessage(display: YDisplay, msg: any) {
+async function sendMessage(display: YDisplay, msg: any) {
     //console.log(`Y11: Sending message to display socket ${display.socket.id}:`, msg);
-    kernel.send(display.socket, new TextEncoder().encode(JSON.stringify(msg)));
+    await kernel.send(display.socket, new TextEncoder().encode(JSON.stringify(msg)));
 }
 
 async function handleNewConnection(socket: Socket) {

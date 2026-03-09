@@ -1,9 +1,9 @@
 import context from "./context.svelte";
 import icon_notepad_16 from "./assets/icon_notepad_16.png";
 
-const x11 = kernel.import("y11");
-const svelte = kernel.import("svelte");
-const utils = kernel.import("utils");
+const x11 = include("y11");
+const svelte = include("svelte");
+const utils = include("utils");
 
 export default async function(args) {
     console.log("Starting notepad app with args:", args);
@@ -11,10 +11,9 @@ export default async function(args) {
 
     const filename = args.length > 0 ? args[0] : null;
     let content = "";
-    let fd = null;
 
-    const openFile = (filename) => {
-        fd = kernel.vfs.open(filename);
+    const openFile = async (filename) => {
+        const fd = await kernel.vfs.open(filename);
         if(!fd) {
             content = "";
             filename = "";
@@ -23,11 +22,11 @@ export default async function(args) {
             throw new Error("Failed to open file");
         }
 
-        kernel.vfs.fseek(fd, 0, "END");
+        await kernel.vfs.fseek(fd, 0, "END");
         const size = fd.position;
-        kernel.vfs.fseek(fd, 0, "SET");
+        await kernel.vfs.fseek(fd, 0, "SET");
 
-        const fileData = kernel.vfs.read(fd, size);
+        const fileData = await kernel.vfs.read(fd, size);
 
         try {
             const binaryReader = new utils.binaryReader(fileData);
@@ -57,16 +56,9 @@ export default async function(args) {
             ipc.on_window_size_change?.(640, 480);
         },
 
-        on_ctx_content_change: (newContent) => {
+        on_ctx_content_change: async (newContent) => {
             content = newContent;
-
-            if(fd !== null) {
-                const binaryWriter = new utils.binaryWriter(4 + newContent.length * 2);
-                binaryWriter.uint32(newContent.length);
-                binaryWriter.string(newContent);
-
-                kernel.vfs.write(fd, binaryWriter.getBuffer());
-            }
+            debouncedSave(); 
         },
 
         on_window_resize: (width, height) => {
@@ -81,6 +73,27 @@ export default async function(args) {
             ipc.on_window_size_change?.(newWidth, newHeight);
         }
     };
+
+    const debounce = (func, delay) => {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                func(...args);
+            }, delay);
+        };
+    };
+
+    const debouncedSave = debounce(async () => {
+        const fd = await kernel.vfs.open(filename);
+        console.log("Opened file descriptor for writing:", fd);
+
+        const binaryWriter = new utils.binaryWriter(4 + content.length * 2);
+        binaryWriter.uint32(content.length);
+        binaryWriter.string(content);
+
+        await kernel.vfs.write(fd, binaryWriter.getBuffer());
+    }, 1000);
 
     await x11.selectInput(display, window, 8); // STRUCTURE_NOTIFY
 
@@ -100,7 +113,7 @@ export default async function(args) {
 
     if(filename) {
         try {
-            openFile(filename);
+            await openFile(filename);
         } catch(error) {
             console.error("Error opening file:", error);
         }

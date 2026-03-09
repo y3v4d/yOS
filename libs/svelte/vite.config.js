@@ -22,7 +22,7 @@ export default defineConfig({
         /*{
             name: "emit-assets",
             enforce: "pre",
-            load(id) {
+            include(id) {
                 if (id.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
                     const fileName = id.split("/").pop();
                     this.emitFile({

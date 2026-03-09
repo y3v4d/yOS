@@ -1,9 +1,9 @@
 import context from "./context.svelte";
 import icon_txt_32 from "./assets/icon_txt_32.png";
 
-const x11 = kernel.import("y11");
-const svelte = kernel.import("svelte");
-const utils = kernel.import("utils");
+const x11 = include("y11");
+const svelte = include("svelte");
+const utils = include("utils");
 
 let display;
 let window;
@@ -13,7 +13,7 @@ export default async function(args) {
     const ipc = {
         on_context_mount: async () => {
             ipc.update_entry_size?.(80, 80);
-            ipc.update_files?.(getDesktopFiles());
+            ipc.update_files?.(await getDesktopFiles());
             ipc.update_processes?.(kernel.listProcesses());
         },
 
@@ -24,24 +24,24 @@ export default async function(args) {
             x11.changeProperty(display, x11.getRootWindow(display), "_NET_ACTIVE_WINDOW", window);
         },
 
-        on_open_file_request: (stat) => {
+        on_open_file_request: async (stat) => {
             const path = "/home/y3v4d/desktop/" + stat.name;
 
             const ext = utils.path.extname(stat.name).slice(1);
             if(ext === "exe") {
-                kernel.execve(path);
+                await kernel.execve(path);
             } else if(ext === "lnk") {
                 const formatUtils = new utils.vfsFormat(kernel.vfs);
-                const { targetPath, icon, props } = formatUtils.readShortcut(path);
+                const { targetPath, icon, props } = await formatUtils.readShortcut(path);
                 const targetExt = utils.path.extname(targetPath).slice(1);
 
                 if(targetExt === "exe") {
-                    kernel.execve(targetPath, props);
+                    await kernel.execve(targetPath, props);
                 } else if(targetExt === "txt") {
-                    kernel.execve("/etc/applications/notepad.exe", targetPath);
+                    await kernel.execve("/etc/applications/notepad.exe", targetPath);
                 }
             } else if(ext === "txt") {
-                kernel.execve("/etc/applications/notepad.exe", path);
+                await kernel.execve("/etc/applications/notepad.exe", path);
             }
         },
 
@@ -122,7 +122,7 @@ export default async function(args) {
         }
 
         if(file_updated) {
-            ipc.update_files?.(getDesktopFiles());
+            ipc.update_files?.(await getDesktopFiles());
         }
 
         await kernel.yield();
@@ -132,9 +132,9 @@ export default async function(args) {
     await x11.destroyWindow(display, window);
     x11.closeDisplay(display);
 
-    function getDesktopFiles() {
+    async function getDesktopFiles() {
         try {
-            const dir = kernel.vfs.opendir("/home/y3v4d/desktop");
+            const dir = await kernel.vfs.opendir("/home/y3v4d/desktop");
             const files = [];
 
             let file;
@@ -142,7 +142,8 @@ export default async function(args) {
                 files.push(file);
             }
 
-            return files.map(file => {
+            const mapped = [];
+            for(const file of files) {
                 const entry = {
                     name: file.name,
                     ext: utils.path.extname(file.name).slice(1),
@@ -163,7 +164,7 @@ export default async function(args) {
                     const formatUtils = new utils.vfsFormat(kernel.vfs);
 
                     const path = "/home/y3v4d/desktop/" + entry.name;
-                    const { targetPath, icon, props } = formatUtils.readShortcut(path);
+                    const { targetPath, icon, props } = await formatUtils.readShortcut(path);
                     const targetExt = utils.path.extname(targetPath).slice(1);
 
                     if(icon) {
@@ -183,9 +184,11 @@ export default async function(args) {
                 } else {
                     entry.icon = undefined;
                 }
+                
+                mapped.push(entry);
+            }
 
-                return entry;
-            })
+            return mapped;
         } catch(e) {
             console.error("Failed to read desktop directory:", e);
             return [];

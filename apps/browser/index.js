@@ -1,4 +1,4 @@
-const x11 = kernel.import("y11");
+const x11 = include("y11");
 
 export default async function(args) {
     const props = args[0];

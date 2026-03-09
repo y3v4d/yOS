@@ -1,8 +1,8 @@
 import context from "./context.svelte";
 import icon_taskmanager_16 from "./assets/icon_taskmanager_16.png";
 
-const x11 = kernel.import("y11");
-const svelte = kernel.import("svelte");
+const x11 = include("y11");
+const svelte = include("svelte");
 
 let display;
 

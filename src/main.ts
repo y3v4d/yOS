@@ -5,14 +5,42 @@ import { Kernel } from './yos/core/kernel';
 
 import { apps, appUrls } from "virtual:apps";
 import { libs, libUrls } from "virtual:libs";
-
-const kernel = new Kernel();
-
-kernel.audio.preload("/sfx/click.mp3");
+import { IDBDriver } from './yos/core/idb_driver';
 
 async function main() {
+  //await IDBDriver.delete("yos-vfs");
+  const kernel = await Kernel.create();
+
+  kernel.audio.preload("/sfx/click.mp3");
   kernel.registry.set("ext-txt-application", "app-ynotepad");
 
+  const installerNeeded = await is_installer_needed(kernel);
+  if(installerNeeded) {
+    console.log("Installer is needed, launching installer...");
+    await launch_installer(kernel);
+  } else {
+    console.log("Installer is not needed, skipping installer.");
+  }
+
+  await kernel.execve("/etc/applications/y11.exe");
+  await kernel.waitFor("y11:ready"); // mostly wait for the socket
+
+  await kernel.execve("/etc/applications/ywm.exe");
+  await kernel.execve("/etc/applications/desktop.exe");
+  await kernel.execve("/etc/applications/taskbar.exe");
+}
+
+async function is_installer_needed(kernel: Kernel): Promise<boolean> {
+    try {
+        const fd = await kernel.vfs.open("/etc/installer_done");
+        await kernel.vfs.read(fd, 100);
+        return false;
+    } catch (e) {
+        return true;
+    }
+}
+
+async function launch_installer(kernel: Kernel) {
   let installerCode: string;
 
   if(appUrls && appUrls["installer"]) {
@@ -26,34 +54,10 @@ async function main() {
     throw new Error("Installer app not found!");
   }
 
-  const process = kernel.exec(installerCode, apps ?? appUrls, libs ?? libUrls, !!appUrls);
+  const process = await kernel.exec(installerCode, apps ?? appUrls, libs ?? libUrls, !!appUrls);
   while(!process.is_dead) {
     await new Promise(resolve => setTimeout(resolve, 0));
   }
-
-  kernel.execve("/etc/applications/y11.exe");
-  kernel.execve("/etc/applications/ywm.exe");
-  kernel.execve("/etc/applications/desktop.exe");
-  kernel.execve("/etc/applications/taskbar.exe");
-
-  /*
-  setTimeout(() => {
-    console.log("VFS Structure:");
-
-    //kernel.vfs.printStructure();
-    //kernel.vfs.printBlocks();
-
-    const dir = kernel.vfs.opendir("/home/y3v4d/desktop");
-    const entires = [];
-
-    let entry;
-    while(entry = kernel.vfs.readdir(dir)) {
-      entires.push(entry);
-    }
-
-    //console.log("Directory entries in /home/y3v4d/desktop:", entires);
-  }, 1000);
-  */
 }
 
 /*window.oncontextmenu = (e) => {

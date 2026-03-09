@@ -1,7 +1,7 @@
 import WindowContext from "./window-context.svelte";
 
-const x11 = kernel.import("y11");
-const svelte = kernel.import("svelte");
+const x11 = include("y11");
+const svelte = include("svelte");
 
 const frames = [];
 const clients = new Map();
@@ -52,14 +52,23 @@ export default async function(args) {
 
         //console.log(`ywm pid: ${kernel.getpid()}`);
 
-        await kernel.yield();
-        //console.log("Kernel: ywm end of main loop iteration");
+        try {
+            await kernel.yield();
+        } catch(e) {
+            should_close = true;
+        }
     }
 
+    console.log("yWM: Closing display connection and exiting.");
     for(const [, client] of clients) {
-        const frame = client.frame;
+        for(const { element, type, listener } of client.domEvents) {
+            element.removeEventListener(type, listener);
+        }
 
-        await x11.reparentWindow(display, client.window, rootWindow, frame.x, frame.y);
+        const frame = client.frame;
+        const geometry = await x11.getGeometry(display, frame);
+
+        await x11.reparentWindow(display, client.window, rootWindow, geometry.x, geometry.y);
         await x11.destroyWindow(display, frame);
     }
 
@@ -197,7 +206,8 @@ async function processMapRequest(event) {
         window: event.window,
         layer: layer,
         borderWidth: hasDecoration ? 4 : 0,
-        titlebarHeight: hasDecoration ? 21 : 0
+        titlebarHeight: hasDecoration ? 21 : 0,
+        domEvents: []
     };
 
     const currentTitle = await x11.getProperty(display, event.window, "_NET_WM_NAME") || "Untitled Window";
@@ -222,15 +232,22 @@ async function processMapRequest(event) {
     
     await x11.reparentWindow(display, event.window, frame, client.borderWidth, client.titlebarHeight + client.borderWidth);
 
-    const domElement = document.getElementById(`window-${event.window.id}`);
-    domElement.onmousedown = async () => {
+    const windowMouseDownListener = async () => {
         if(!display) return;
 
         console.log(`yWindowManager: Window id ${event.window.id} received mousedown, raising.`);
         await x11.changeProperty(display, x11.getRootWindow(display), "_NET_ACTIVE_WINDOW", event.window);
         
         raiseClientWindow(client);
-    }
+    };
+
+    const domElement = document.getElementById(`window-${event.window.id}`);
+    domElement.addEventListener("mousedown", windowMouseDownListener);
+    client.domEvents.push({
+        element: domElement,
+        type: "mousedown",
+        listener: windowMouseDownListener
+    });
 
     frames.push(frame);
     clients.set(event.window.id, client);

@@ -13,7 +13,7 @@ export class vfsFormat {
         readonly vfs: any
     ) {}
 
-    createShortcut(path: string, targetPath: string, icon?: string, props: ExecutableProps = {}) {
+    async createShortcut(path: string, targetPath: string, icon?: string, props: ExecutableProps = {}) {
         const writer = new binaryWriter(1024);
         writer.uint32(targetPath.length);
         writer.string(targetPath);
@@ -27,25 +27,25 @@ export class vfsFormat {
 
         this._writeProps(writer, props);
 
-        const fd = this.vfs.open(path + ".lnk");
-        this.vfs.write(fd, writer.getBuffer());
+        const fd = await this.vfs.open(path + ".lnk");
+        await this.vfs.write(fd, writer.getBuffer());
 
         return fd;
     }
 
-    readShortcut(path: string) {
+    async readShortcut(path: string) {
         const { ext } = pathUtils.disect(path);
         if(ext !== "lnk") {
             throw new Error("Invalid shortcut file: " + path);
         }
 
-        const fd = this.vfs.open(path);
+        const fd = await this.vfs.open(path);
         
-        this.vfs.fseek(fd, 0, "END");
+        await this.vfs.fseek(fd, 0, "END");
         const fileSize = fd.position;
-        this.vfs.fseek(fd, 0, "SET");
+        await this.vfs.fseek(fd, 0, "SET");
 
-        const buffer = this.vfs.read(fd, fileSize);
+        const buffer = await this.vfs.read(fd, fileSize);
         const reader = new binaryReader(buffer);
 
         const targetPathLength = reader.uint32();

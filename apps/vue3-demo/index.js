@@ -1,7 +1,7 @@
 import icon_vue_16 from "./assets/icon_vue_16.png";
 
-const x11 = kernel.import("y11");
-const vue3 = kernel.import("vue3");
+const x11 = include("y11");
+const vue3 = include("vue3");
 
 export default async function(args) {
 

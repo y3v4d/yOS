@@ -18,9 +18,9 @@ export default defineConfig({
             output: {
                 assetFileNames: "[name][extname]", // preserve names
                 globals: {
-                    "svelte": "kernel.import('svelte').core",
-                    "svelte/internal/client": "kernel.import('svelte').internalClient",
-                    "svelte/reactivity": "kernel.import('svelte').reactivity"
+                    "svelte": "include('svelte').core",
+                    "svelte/internal/client": "include('svelte').internalClient",
+                    "svelte/reactivity": "include('svelte').reactivity"
                 }
             }
         },

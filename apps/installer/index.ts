@@ -16,9 +16,10 @@ export default async function(args: any[]) {
 
     console.log("Installer app started with args:", args);
 
-    kernel.vfs.mkdir("/home/y3v4d/desktop");
-    kernel.vfs.mkdir("/etc/applications");
-    kernel.vfs.mkdir("/libs");
+    await kernel.vfs.mkdir("/tmp/sockets", { recursive: true });
+    await kernel.vfs.mkdir("/home/y3v4d/desktop", { recursive: true });
+    await kernel.vfs.mkdir("/etc/applications", { recursive: true });
+    await kernel.vfs.mkdir("/libs", { recursive: true });
 
     for(const [name, src_or_url] of Object.entries(libs)) {
         let src: string;
@@ -31,7 +32,7 @@ export default async function(args: any[]) {
             src = src_or_url;
         }
 
-        create_lib_file(name, src);
+        await create_lib_file(name, src);
     }
 
     for(const [name, src_or_url] of Object.entries(apps)) {
@@ -45,42 +46,44 @@ export default async function(args: any[]) {
             src = src_or_url;
         }
 
-        create_script_file(`/etc/applications/${name}`, src);
+        await create_script_file(`/etc/applications/${name}`, src);
     }
 
-    create_desktop_txt_file("readme", readme_txt);
+    await create_desktop_txt_file("readme", readme_txt);
     
-    create_desktop_txt_file("about_me", about_me_txt);
-    create_desktop_txt_file("about_this", about_this_txt);
+    await create_desktop_txt_file("about_me", about_me_txt);
+    await create_desktop_txt_file("about_this", about_this_txt);
 
-    create_desktop_txt_file("links", links_txt);
-    create_desktop_txt_file("changelog", changelog_txt);
-    create_desktop_txt_file("credits", credits_txt);
+    await create_desktop_txt_file("links", links_txt);
+    await create_desktop_txt_file("changelog", changelog_txt);
+    await create_desktop_txt_file("credits", credits_txt);
     
-    const utils = kernel.import("utils");
+    console.log("Created text files on desktop.");
+    const utils = await kernel.dlopen("utils");
+    console.log("Creating shortcuts on desktop...");
     const formatUtils = new utils.vfsFormat(kernel.vfs);
 
-    formatUtils.createShortcut(
+    await formatUtils.createShortcut(
         "/home/y3v4d/desktop/Svelte 5 Demo",
         "/etc/applications/svelte-demo.exe",
         icon_svelte_16
     );
 
-    formatUtils.createShortcut(
+    await formatUtils.createShortcut(
         "/home/y3v4d/desktop/Voxelly",
         "/etc/applications/browser.exe",
         undefined,
         { url: "https://y3v4d.com/voxelly", title: "Voxelly - IFrame" }
     );
 
-    formatUtils.createShortcut(
+    await formatUtils.createShortcut(
         "/home/y3v4d/desktop/Match Mayhem",
         "/etc/applications/browser.exe",
         undefined,
         { url: "https://y3v4d.com/match3d", title: "Match Mayhem - IFrame", width: 300, height: 600 }
     );
 
-    formatUtils.createShortcut(
+    await formatUtils.createShortcut(
         "/home/y3v4d/desktop/Wedding Planner",
         "/etc/applications/browser.exe",
         undefined,
@@ -92,7 +95,7 @@ export default async function(args: any[]) {
         }
     );
 
-    formatUtils.createShortcut(
+    await formatUtils.createShortcut(
         "/home/y3v4d/desktop/Musical Animals",
         "/etc/applications/browser.exe",
         undefined,
@@ -104,23 +107,41 @@ export default async function(args: any[]) {
         }
     );
 
-    formatUtils.createShortcut(
+    await formatUtils.createShortcut(
         "/home/y3v4d/desktop/yTaskManager",
         "/etc/applications/taskmanager.exe",
         icon_taskmanager_32
     );
 
-    formatUtils.createShortcut(
+    await formatUtils.createShortcut(
         "/home/y3v4d/desktop/Vue 3 Demo",
         "/etc/applications/vue3-demo.exe",
         icon_vue_32
     );
+
+    await create_installer_confirmation_file();
 }
 
-function create_desktop_txt_file(name: string, content: string) {
-    const utils = kernel.import("utils");
+async function create_installer_confirmation_file() {
+    const utils = await kernel.dlopen("utils");
 
-    const fd = kernel.vfs.open(`/home/y3v4d/desktop/${name}.txt`);
+    const fd = await kernel.vfs.open("/etc/installer_done");
+    const content = "Installer has completed successfully.";
+    const encodedContent = new TextEncoder().encode(content);
+    const binaryWriter = new utils.binaryWriter(4 + encodedContent.length);
+
+    binaryWriter.uint32(encodedContent.length);
+    binaryWriter.bytes(encodedContent);
+
+    await kernel.vfs.write(fd, binaryWriter.getBuffer());
+
+    console.log("Created installer confirmation file /etc/installer_done");
+}
+
+async function create_desktop_txt_file(name: string, content: string) {
+    const utils = await kernel.dlopen("utils");
+
+    const fd = await kernel.vfs.open(`/home/y3v4d/desktop/${name}.txt`);
 
     const encodedContent = new TextEncoder().encode(content);
     const binaryWriter = new utils.binaryWriter(4 + encodedContent.length);
@@ -128,15 +149,15 @@ function create_desktop_txt_file(name: string, content: string) {
     binaryWriter.uint32(encodedContent.length);
     binaryWriter.bytes(encodedContent);
 
-    kernel.vfs.write(fd, binaryWriter.getBuffer());
+    await kernel.vfs.write(fd, binaryWriter.getBuffer());
 
     console.log(`Created text file /home/y3v4d/desktop/${name}.txt`);
 }
 
-function create_script_file(path: string, content: string) {
-    const utils = kernel.import("utils");
+async function create_script_file(path: string, content: string) {
+    const utils = await kernel.dlopen("utils");
 
-    const fd = kernel.vfs.open(`${path}.exe`);
+    const fd = await kernel.vfs.open(`${path}.exe`);
 
     const encodedContent = new TextEncoder().encode(content);
     const binaryWriter = new utils.binaryWriter(4 + encodedContent.length);
@@ -144,13 +165,13 @@ function create_script_file(path: string, content: string) {
     binaryWriter.uint32(encodedContent.length);
     binaryWriter.bytes(encodedContent);
 
-    kernel.vfs.write(fd, binaryWriter.getBuffer());
+    await kernel.vfs.write(fd, binaryWriter.getBuffer());
 
     console.log(`Created script file ${path}.exe`);
 }
 
-function create_lib_file(name: string, content: string) {
-    const fd = kernel.vfs.open(`/libs/${name}.lib`);
+async function create_lib_file(name: string, content: string) {
+    const fd = await kernel.vfs.open(`/libs/${name}.lib`);
 
     const encodedContent = new TextEncoder().encode(content);
 
@@ -160,7 +181,7 @@ function create_lib_file(name: string, content: string) {
     view.setUint32(0, encodedContent.length, true);
     data.set(encodedContent, 4);
 
-    kernel.vfs.write(fd, data);
+    await kernel.vfs.write(fd, data);
 
     console.log(`Created lib file /libs/${name}.lib`);
 }

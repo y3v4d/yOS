@@ -81,7 +81,7 @@ export async function openDisplay() {
     }
 
     const socket = kernel.socket();
-    kernel.connect(socket, "y11.sock");
+    await kernel.connect(socket, "y11.sock");
 
     const res = await kernel.readv(socket);
     // @ts-ignore

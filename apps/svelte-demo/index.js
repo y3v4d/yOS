@@ -1,8 +1,8 @@
 import icon_svelte_16 from "./assets/icon_svelte_16.png";
 import context from "./context.svelte";
 
-const x11 = kernel.import("y11");
-const svelte = kernel.import("svelte");
+const x11 = include("y11");
+const svelte = include("svelte");
 
 export default async function(args) {
     const display = await x11.openDisplay();
