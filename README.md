@@ -45,6 +45,11 @@ All applications are compiled separately, stored on the VFS and loaded on demand
 - **Svelte 5** - used as a main renderer for yWM decorations and all built-in applications
 - **Vue 3** - used only as a proof of concept of the framework-agnostic nature of the system, demonstrating that y11 client library is able to attach contexts of different frameworks naturally side by side without any issues
 
+## Deep dive technical explanation
+
+I wrote a detailed technical article explaining the architecture and implementation of yOS, covering the kernel design, display system, window manager and applications. 
+
+You can read it here: https://dev.to/y3v4d/i-built-a-unix-like-os-running-in-browser-201n
 
 ## Live Demo
 [https://y3v4d.com](https://y3v4d.com)
