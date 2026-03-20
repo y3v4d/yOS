@@ -9,7 +9,7 @@ import { IDBDriver } from './yos/core/idb_driver';
 
 async function main() {
   //await IDBDriver.delete("yos-vfs");
-  const kernel = await Kernel.create(2);
+  const kernel = await Kernel.create(3);
 
   kernel.audio.preload("/sfx/click.mp3");
   kernel.registry.set("ext-txt-application", "app-ynotepad");

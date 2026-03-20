@@ -20,9 +20,12 @@ class IDBDriver {
                 const db = request.result;
 
                 for(const storeName of stores ?? []) {
-                    if(!db.objectStoreNames.contains(storeName)) {
-                        db.createObjectStore(storeName);
+                    if(db.objectStoreNames.contains(storeName)) {
+                        db.deleteObjectStore(storeName);
                     }
+
+
+                    db.createObjectStore(storeName);
                 }
             };
         });

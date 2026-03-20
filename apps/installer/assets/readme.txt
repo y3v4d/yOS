@@ -1,4 +1,4 @@
-yOS - Web Operating System v0.4.2
+yOS - Web Operating System v0.4.3
 --------------------------------------------------
 
 Welcome to yOS, an experimental Unix-like operating system running entirely in the browser.
