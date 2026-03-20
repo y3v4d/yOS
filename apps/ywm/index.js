@@ -14,6 +14,8 @@ const layers = {
 };
 
 let display = null;
+let isOnMobileDevice = null;
+let rootWindow = null;
 
 //console.log = () => {};
 
@@ -23,7 +25,11 @@ export default async function(args) {
 
     display = await x11.openDisplay();
     console.log("yWM: Connected to X11 display, display id:", display.id);
-    const rootWindow = x11.getRootWindow(display);
+    rootWindow = x11.getRootWindow(display);
+
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    isOnMobileDevice = rootWindow.width < 800 || isTouchDevice;
+
     console.log("yWM: Connected to X11 display, root window id:", rootWindow.id);
 
     await x11.selectInput(display, rootWindow, 2 | 16);
@@ -163,6 +169,14 @@ async function processConfigureRequest(event) {
         (event.value_mask & 16) !== 0;
     
     if(isTransformMask) {
+        const isNormalWindow = await x11.getProperty(display, event.window, "_NET_WM_WINDOW_TYPE") === "_NET_WM_WINDOW_TYPE_NORMAL";
+        const shouldAllowResize = isNormalWindow && !isOnMobileDevice;
+
+        if(!shouldAllowResize) {
+            console.log(`yWindowManager: Ignoring configure request for window id ${event.window.id} because it's not a normal window or we're on a mobile device.`);
+            return;
+        }
+
         await x11.configureWindow(display, frame, {
             x: event.x,
             y: event.y,
@@ -214,26 +228,45 @@ async function processMapRequest(event) {
     };
 
     const currentTitle = await x11.getProperty(display, event.window, "_NET_WM_NAME") || "Untitled Window";
+    const windowType = await x11.getProperty(display, event.window, "_NET_WM_WINDOW_TYPE") || "_NET_WM_WINDOW_TYPE_NORMAL";
     const windowGeometry = await x11.getGeometry(display, event.window);
 
     await x11.selectInput(display, frame, 2 | 4);
     await x11.changeProperty(display, frame, "_NET_WM_NAME", currentTitle + " - yFrame");
-    await x11.configureWindow(display, frame, {
-        width: windowGeometry.width + client.borderWidth * 2,
-        height: windowGeometry.height + client.titlebarHeight + client.borderWidth * 2,
-        x: windowGeometry.x,
-        y: windowGeometry.y
-    })
+
+    if(isOnMobileDevice && windowType === "_NET_WM_WINDOW_TYPE_NORMAL") {
+        await x11.configureWindow(display, frame, {
+            width: rootWindow.width,
+            height: rootWindow.height - 29,
+            x: 0,
+            y: 0
+        });
+    } else {
+        await x11.configureWindow(display, frame, {
+            width: windowGeometry.width + client.borderWidth * 2,
+            height: windowGeometry.height + client.titlebarHeight + client.borderWidth * 2,
+            x: windowGeometry.x,
+            y: windowGeometry.y
+        });
+    }
 
     if(hasDecoration) {
         x11.attachContext(frame, svelte.createContext(WindowContext, {
             x11: x11,
             display: display,
-            client: client
+            client: client,
+            isOnMobileDevice: isOnMobileDevice
         }));
     }
     
     await x11.reparentWindow(display, event.window, frame, client.borderWidth, client.titlebarHeight + client.borderWidth);
+
+    if(isOnMobileDevice && windowType === "_NET_WM_WINDOW_TYPE_NORMAL") {
+        await x11.configureWindow(display, event.window, {
+            width: rootWindow.width - client.borderWidth * 2,
+            height: rootWindow.height - 29 - client.titlebarHeight - client.borderWidth * 2,
+        });
+    }
 
     const windowMouseDownListener = async () => {
         if(!display) return;

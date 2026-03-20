@@ -41,7 +41,7 @@ export default async function(args) {
         }
         
         filename = filename;
-        x11.changeProperty(display, window, "_NET_WM_NAME", `yNotepad - ${filename}`);
+        await x11.changeProperty(display, window, "_NET_WM_NAME", `yNotepad - ${filename}`);
     }
 
     const display = await x11.openDisplay();

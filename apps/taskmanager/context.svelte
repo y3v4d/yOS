@@ -135,8 +135,8 @@
                         {#each processes as process}
                             {@const exeName = utils.path.basename(process.path || "") || "Unnammed Executable"}
                             <button class="content-box-row" class:content-box-row--selected={selectedProcessId === process.pid} onclick={() => selectedProcessId = process.pid}>
-                                <div class="process-name">{exeName}</div>
-                                <div class="process-pid">{process.pid}</div>
+                                <p class="process-name">{exeName}</p>
+                                <p class="process-pid">{process.pid}</p>
                             </button>
                         {/each}
                     </div>
@@ -191,7 +191,10 @@
 
     .application-entry--selected {
         background-color: #0A246A;
-        color: white;
+    }
+
+    .application-entry--selected > * {
+        color: white !important;
     }
 
     .application-status {
@@ -227,6 +230,10 @@
     .content-box-row--selected {
         background-color: #0A246A;
         color: white;
+    }
+
+    .content-box-row--selected > * {
+        color: white !important;
     }
 
     .content-box-header {
