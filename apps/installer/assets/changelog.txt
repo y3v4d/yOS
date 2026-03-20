@@ -1,6 +1,14 @@
 CHANGELOG
 ------------------
 
+Version 0.4.2 - 20/03/2026
+
+- Fixed invalid text colors for mobile browser
+- Added ability to change IDB version (bumped to 2)
+- Double tap on mobile no longer breaks the layout
+- Added mobile device detection for yWM which opens all normal type windows in fullscreen and prevents moving or resizing windows
+- Fixed notepad title sometimes not correctly updating
+
 Version 0.4.0 - 09/03/2026
 
 - All apps and libraries are now completely separate scripts, not integrated with the core yos modules
