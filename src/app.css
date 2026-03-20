@@ -43,7 +43,14 @@ html, body {
 
   background-color: #404040;
   overflow: hidden;
+
+  touch-action: manipulation;
 }
+
+* {
+  color: black;
+}
+
 
 button {
   border: none;

@@ -54,9 +54,9 @@ class VFS {
 
     private constructor(readonly kernel: Kernel) {}
 
-    static async create(kernel: Kernel) {
+    static async create(kernel: Kernel, version: number = 1) {
         const vfs = new VFS(kernel);
-        vfs._driver = await IDBDriver.create("yos-vfs", 1, ["inodes", "blocks", "metadata"]);
+        vfs._driver = await IDBDriver.create("yos-vfs", version, ["inodes", "blocks", "metadata"]);
 
         let rootNode: INode = await vfs._driver.read("inodes", 0);
         if(!rootNode) {

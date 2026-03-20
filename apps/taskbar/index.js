@@ -36,13 +36,14 @@ export default async function(args) {
     });
     await x11.changeWindowBackgroundColor(display, window, "#202020");
 
-    await x11.mapWindow(display, window);
     await x11.configureWindow(display, window, {
         width: rootWindow.width,
         height: 29,
         x: 0,
         y: rootWindow.height - 29
     });
+
+    await x11.mapWindow(display, window);
 
     let has_context = false;
     let should_close = false;
