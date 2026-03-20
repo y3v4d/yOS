@@ -92,7 +92,7 @@
     <Button style="padding: 3px 5px 3px 3px; min-width: fit-content;">
         <div style="display: flex; align-items: center; justify-content: center; gap: 2px;">
             <img src="/logo_16.png" alt="yOS Logo" width="16" height="16" style="image-rendering: pixelated;"/>
-            <div>Start</div>
+            <p>Start</p>
         </div>
     </Button>
     <div class="separator"></div>
@@ -110,7 +110,7 @@
                 <img src={item.icon || icon_default_16} alt="icon" width="16px" height="16px" style="image-rendering: pixelated;" />
                 
                 {#if !shouldHideNames}
-                    <p>{item.title || "Untitled Window"}</p>
+                    <p style="white-space: nowrap;">{item.title || "Untitled Window"}</p>
                 {/if}
             </button>
         {/each}

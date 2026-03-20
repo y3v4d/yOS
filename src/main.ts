@@ -9,7 +9,7 @@ import { IDBDriver } from './yos/core/idb_driver';
 
 async function main() {
   //await IDBDriver.delete("yos-vfs");
-  const kernel = await Kernel.create();
+  const kernel = await Kernel.create(2);
 
   kernel.audio.preload("/sfx/click.mp3");
   kernel.registry.set("ext-txt-application", "app-ynotepad");
@@ -59,6 +59,10 @@ async function launch_installer(kernel: Kernel) {
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 }
+
+document.addEventListener('gesturestart', function (e) {
+    //e.preventDefault(); // iOS pinch zoom
+});
 
 /*window.oncontextmenu = (e) => {
   e.preventDefault();

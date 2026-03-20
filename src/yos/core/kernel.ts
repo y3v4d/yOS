@@ -72,10 +72,10 @@ class Kernel {
 
     private constructor() {}
 
-    static async create() {
+    static async create(version: number = 1) {
         const kernel = new Kernel();
 
-        kernel._vfs = await VFS.create(kernel);
+        kernel._vfs = await VFS.create(kernel, version);
         kernel._audio = new AudioCore(kernel);
         kernel._registry = new Registry();
 

@@ -18,12 +18,14 @@
         x11: any;
         display: any;
         client: any;
+        isOnMobileDevice: boolean;
     }
 
     let {
         x11,
         display,
-        client
+        client,
+        isOnMobileDevice
     }: WindowProps = $props();
 
     let title = $state("");
@@ -106,6 +108,10 @@
     let pointerOffsetY: number;
 
     const onTitlebarPointerDown = async (event: PointerEvent) => {
+        if(isOnMobileDevice) {
+            return;
+        }
+        
         const target = event.currentTarget as HTMLElement;
 
         const geometry = await x11.getGeometry(display, client.frame);
@@ -193,11 +199,13 @@
         <Button onclick={onMinimizeButtonClick}>
             <img src={icon_btn_minimize} alt="Minimize Button" width="10px" height="10px" style="image-rendering: pixelated; margin: 0px 1px;" />
         </Button>
-        <Button onclick={onMaximizeButtonClick}>
-            <img 
-                src={maximized ? icon_btn_unmaximize : icon_btn_maximize} 
-                alt={maximized ? "Unmaximize Button" : "Maximize Button"} width="10px" height="10px" style="image-rendering: pixelated; margin: 0px 1px;" />
-        </Button>
+        {#if !isOnMobileDevice}
+            <Button onclick={onMaximizeButtonClick}>
+                <img 
+                    src={maximized ? icon_btn_unmaximize : icon_btn_maximize} 
+                    alt={maximized ? "Unmaximize Button" : "Maximize Button"} width="10px" height="10px" style="image-rendering: pixelated; margin: 0px 1px;" />
+            </Button>
+        {/if}
         <div style="width: 2px;"></div>
         <Button onclick={onCloseButtonClick}>
             <img src={icon_btn_close} alt="Close Button" style="image-rendering: pixelated; margin: 1px 2px 2px 2px;" />
@@ -248,6 +256,8 @@
     }
 
     .title-bar__title {
+        color: white;
+
         flex-grow: 1;
         text-align: left;
 
