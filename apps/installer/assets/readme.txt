@@ -1,4 +1,4 @@
-yOS - Web Operating System v0.4.4
+yOS - Web Operating System v0.4.5
 --------------------------------------------------
 
 Welcome to yOS, an experimental Unix-like operating system running entirely in the browser.
@@ -30,12 +30,15 @@ Taskbar:
 File System:
 - yOS features a persistent virtual filesystem backed by IndexedDB, so your files survive page reloads.
 - The filesystem is inode and block based, mirroring the structure of a real Unix filesystem.
+- Includes simplified inotify implementation - special type of file descriptor that watches for changes for a specified file.
 - Use yNotepad to edit text files stored on the filesystem.
+- Use yFileManager to browse the entire filesystem, launch applications and edit text the files.
 
 Applications:
 - yNotepad — text file viewer and editor
 - yTaskManager — view and manage running processes
 - yBrowser — in-app browser for external websites
+- yFileManager — browse the entire filesystem
 - Demo applications showcasing Svelte and Vue contexts
 - Some of my personal or past client projects
 

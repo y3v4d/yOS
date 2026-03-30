@@ -28,7 +28,7 @@ The most recent rewrite was the VFS, which now uses IndexedDB for storage, makin
 with asynchronous file operations and all.
 
 Current result is a already pretty solid, but I'm yet to experiment with WebWorkers for true multi-threading, and there are a lot
-of basic applications still missing, like file manager, terminal emulator, settings app and so on. 
+of basic applications still missing, like terminal emulator, settings app and so on. 
 But the core system is there, and it's pretty nice to look at it already.
 
 The project is still in progress, so stay tuned for more updates and improvements!

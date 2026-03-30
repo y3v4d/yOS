@@ -1,6 +1,15 @@
 CHANGELOG
 ------------------
 
+Version 0.4.5 - 30/03/2026
+
+- Added simplified inotify implementation in the VFS - special type of file descriptor that watches for changes for a specified file
+- Added yFileManager application, can be used to browse the entire filesystem
+- Added File Manager shortcut to the desktop
+- Changed default title of a notepad application to yNotepad
+- Increased default buffer for shortcut file from 1024 to 2048 to fit more detailed icons
+- p elements are now styled with line-height 1 by default
+
 Version 0.4.4 - 20/03/2026
 
 - Closing yWM now properly clears the _NET_CLIENT_LIST and _NET_CLIENT_STACKING_LIST

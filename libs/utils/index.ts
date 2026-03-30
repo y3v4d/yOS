@@ -14,7 +14,7 @@ export class vfsFormat {
     ) {}
 
     async createShortcut(path: string, targetPath: string, icon?: string, props: ExecutableProps = {}) {
-        const writer = new binaryWriter(1024);
+        const writer = new binaryWriter(2048);
         writer.uint32(targetPath.length);
         writer.string(targetPath);
 
@@ -133,7 +133,8 @@ namespace pathUtils {
     }
 
     export function join(...parts: string[]): string {
-        return parts.join("/").replace(/\/+/g, "/");
+        const joined = parts.join("/").replace(/\/+/g, "/");
+        return normalize(joined);
     }
 
     export function normalize(path: string): string {
