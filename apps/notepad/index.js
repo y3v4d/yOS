@@ -97,7 +97,7 @@ export default async function(args) {
 
     await x11.selectInput(display, window, 8); // STRUCTURE_NOTIFY
 
-    await x11.changeProperty(display, window, "_NET_WM_NAME", "External Notepad");
+    await x11.changeProperty(display, window, "_NET_WM_NAME", "yNotepad");
     await x11.changeProperty(display, window, "_NET_WM_ICON", icon_notepad_16);
     await x11.changeProperty(display, window, "_NET_WM_WINDOW_TYPE", "_NET_WM_WINDOW_TYPE_NORMAL");
 

@@ -8,6 +8,7 @@ import changelog_txt from "./assets/changelog.txt?raw";
 import icon_svelte_16 from "./assets/icon_svelte_16.png";
 import icon_vue_32 from "./assets/icon_vue_32.png";
 import icon_taskmanager_32 from "./assets/icon_taskmanager_32.png";
+import icon_filemanager_32 from "./assets/icon_filemanager_32.png";
 
 export default async function(args: any[]) {
     const apps = args[0] as Record<string, string>;
@@ -117,6 +118,12 @@ export default async function(args: any[]) {
         "/home/y3v4d/desktop/Vue 3 Demo",
         "/etc/applications/vue3-demo.exe",
         icon_vue_32
+    );
+
+    await formatUtils.createShortcut(
+        "/home/y3v4d/desktop/File Manager",
+        "/etc/applications/filemanager.exe",
+        icon_filemanager_32
     );
 
     await create_installer_confirmation_file();
